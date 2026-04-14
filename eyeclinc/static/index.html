@@ -798,15 +798,364 @@ thead th.th-num{text-align:right;}
   tbody td{padding:10px 10px;font-size:13.5px;}
 }
 
-/* ── Bottom nav for mobile (optional — space for fab) ── */
-@media (max-width:768px){
-  /* Prevent content from hiding behind fixed AI button */
-  #content{padding-bottom:env(safe-area-inset-bottom,0px);}
+/* ══════════════════════════════════════════════════════════
+   PIN LOCK SCREEN
+   ══════════════════════════════════════════════════════════ */
+#pin-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--acc);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:24px;
+  transition:opacity .3s ease;
 }
+#pin-screen.hiding{opacity:0;pointer-events:none;}
+#pin-screen.hidden{display:none;}
+
+.pin-logo{
+  width:72px;height:72px;border-radius:20px;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:20px;
+  box-shadow:0 4px 24px rgba(0,0,0,.2);
+}
+.pin-logo svg{width:36px;height:36px;fill:white;}
+.pin-clinic{font-size:20px;font-weight:700;color:white;margin-bottom:6px;letter-spacing:-.3px;}
+.pin-subtitle{font-size:14px;color:rgba(255,255,255,.6);margin-bottom:32px;}
+
+.pin-dots{
+  display:flex;gap:16px;margin-bottom:32px;
+  height:20px;align-items:center;
+}
+.pin-dot{
+  width:14px;height:14px;border-radius:50%;
+  background:rgba(255,255,255,.25);
+  transition:all .2s ease;
+}
+.pin-dot.filled{
+  background:white;
+  transform:scale(1.1);
+  box-shadow:0 0 0 4px rgba(255,255,255,.2);
+}
+.pin-dot.error{background:#f87171;}
+.pin-dot.success{background:#4ade80;}
+
+.pin-error{
+  font-size:13px;color:#fca5a5;
+  margin-bottom:16px;min-height:20px;
+  font-weight:600;text-align:center;
+}
+
+.pin-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:12px;width:100%;max-width:280px;
+}
+.pin-key{
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:16px;
+  color:white;font-size:24px;font-weight:600;
+  height:70px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:all .15s ease;
+  font-family:var(--font);
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
+.pin-key:hover,.pin-key:active{
+  background:rgba(255,255,255,.25);
+  transform:scale(.96);
+}
+.pin-key .pin-sub{font-size:9px;color:rgba(255,255,255,.5);letter-spacing:.12em;margin-top:2px;font-weight:700;}
+.pin-key-del{background:rgba(255,255,255,.06);font-size:20px;}
+.pin-key-ok{background:rgba(255,255,255,.9);color:var(--acc);font-size:14px;font-weight:700;}
+.pin-key-ok:hover{background:white;}
+
+.pin-setup{
+  margin-top:24px;font-size:13px;
+  color:rgba(255,255,255,.5);cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;
+}
+
+/* PIN change modal */
+#modal-pin-change .modal{max-width:360px;}
+
+/* ══════════════════════════════════════════════════════════
+   BOTTOM TAB BAR (mobile only — replaces sidebar)
+   ══════════════════════════════════════════════════════════ */
+#bottom-tab-bar{display:none;}
+
+@media (max-width:768px){
+  /* Hide hamburger — we use bottom bar instead */
+  #mob-menu-btn{display:none !important;}
+  /* Hide desktop sidebar */
+  #sidebar{display:none !important;}
+  /* No overlay needed */
+  #mob-overlay{display:none !important;}
+
+  /* Bottom tab bar */
+  #bottom-tab-bar{
+    display:flex;
+    position:fixed;bottom:0;left:0;right:0;
+    height:62px;
+    background:var(--sur);
+    border-top:1px solid var(--bdr);
+    z-index:50;
+    box-shadow:0 -2px 16px rgba(0,0,0,.07);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .tab-btn{
+    flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:4px;
+    background:none;border:none;cursor:pointer;
+    color:var(--txt3);font-family:var(--font);
+    font-size:10px;font-weight:600;
+    padding:8px 4px;
+    -webkit-tap-highlight-color:transparent;
+    transition:color .15s;
+    position:relative;
+  }
+  .tab-btn svg{width:22px;height:22px;flex-shrink:0;transition:transform .2s;}
+  .tab-btn.active{color:var(--acc);}
+  .tab-btn.active svg{transform:scale(1.1);}
+  .tab-btn .tab-badge{
+    position:absolute;top:6px;
+    right:calc(50% - 18px);
+    background:var(--red);color:white;
+    font-size:9px;font-weight:800;
+    min-width:16px;height:16px;
+    border-radius:8px;padding:0 4px;
+    display:flex;align-items:center;justify-content:center;
+    border:2px solid var(--sur);
+  }
+
+  /* "More" menu panel */
+  #tab-more-panel{
+    position:fixed;bottom:62px;left:0;right:0;
+    background:var(--sur);
+    border-top:1px solid var(--bdr);
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -8px 32px rgba(0,0,0,.1);
+    padding:16px;
+    z-index:49;
+    display:none;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px;
+  }
+  #tab-more-panel.open{display:grid;}
+  #tab-more-overlay{
+    display:none;position:fixed;inset:0;z-index:48;
+  }
+  #tab-more-overlay.open{display:block;}
+  .tab-more-item{
+    display:flex;flex-direction:column;align-items:center;
+    gap:8px;padding:14px 8px;border-radius:12px;
+    background:var(--bg2);cursor:pointer;border:none;
+    font-family:var(--font);font-size:12px;font-weight:600;
+    color:var(--txt2);transition:all .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .tab-more-item:hover,.tab-more-item:active{background:var(--acc-s);color:var(--acc);}
+  .tab-more-item svg{width:24px;height:24px;}
+
+  /* Push content up above tab bar */
+  #content{padding-bottom:74px !important;}
+  .page{padding-bottom:80px !important;}
+
+  /* AI bubble: above tab bar */
+  #ai-bubble{bottom:74px;left:12px;}
+  #ai-panel{bottom:60px;}
+
+  /* Toast above tab bar */
+  #toast{bottom:74px;}
+}
+
+/* ══════════════════════════════════════════════════════════
+   DASHBOARD CHARTS
+   ══════════════════════════════════════════════════════════ */
+.chart-card{
+  background:var(--sur);border:1px solid var(--bdr);
+  border-radius:var(--radius);padding:18px 20px;
+  box-shadow:var(--shadow);
+}
+.chart-title{font-size:11px;font-weight:700;color:var(--txt3);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.chart-wrap{position:relative;width:100%;}
+canvas{display:block;width:100% !important;}
+
+/* Charts grid */
+.charts-grid{
+  display:grid;grid-template-columns:2fr 1fr;
+  gap:16px;margin-bottom:16px;
+}
+@media(max-width:768px){.charts-grid{grid-template-columns:1fr;}}
+
+/* Donut legend */
+.donut-legend{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+.donut-legend-item{display:flex;align-items:center;gap:8px;font-size:13px;}
+.donut-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* Mini sparkline row */
+.spark-row{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:flex-end;height:48px;margin-top:8px;}
+.spark-bar{background:var(--acc-m);border-radius:3px 3px 0 0;transition:height .4s ease;min-height:3px;cursor:default;}
+.spark-bar:hover{background:var(--acc);}
+.spark-labels{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:4px;}
+.spark-label{font-size:9px;color:var(--txt4);text-align:center;font-family:var(--mono);}
+
+/* Notification bell */
+.notif-bell{
+  position:relative;display:inline-flex;
+  align-items:center;justify-content:center;
+}
+.notif-bell-badge{
+  position:absolute;top:-4px;right:-4px;
+  background:var(--red);color:white;
+  font-size:9px;font-weight:800;
+  min-width:16px;height:16px;border-radius:8px;
+  padding:0 4px;display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--sur);
+}
+
+/* Follow-up notification panel */
+#notif-panel{
+  position:fixed;top:56px;left:0;right:0;
+  background:var(--sur);border-bottom:1px solid var(--bdr2);
+  box-shadow:0 8px 32px rgba(0,0,0,.1);
+  z-index:60;max-height:60vh;overflow-y:auto;
+  display:none;
+}
+#notif-panel.open{display:block;}
+.notif-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;border-bottom:1px solid var(--bdr);
+  cursor:pointer;transition:background .12s;
+}
+.notif-item:hover{background:var(--acc-s);}
+.notif-item:last-child{border-bottom:none;}
+.notif-av{width:36px;height:36px;border-radius:50%;background:var(--amb);color:white;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;flex-shrink:0;}
+.notif-av.urgent{background:var(--red);}
+.notif-name{font-size:14px;font-weight:600;}
+.notif-due{font-size:12px;color:var(--txt3);}
+.notif-days{margin-right:auto;font-size:12px;font-weight:700;color:var(--amb);}
+.notif-days.urgent{color:var(--red);}
+#notif-overlay{display:none;position:fixed;inset:0;z-index:59;}
+#notif-overlay.open{display:block;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
-<div id="mob-overlay" onclick="closeMobNav()"></div>
+
+<!-- ══ PIN LOCK SCREEN ══ -->
+<div id="pin-screen">
+  <div class="pin-logo">
+    <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+  </div>
+  <div class="pin-clinic" id="pin-clinic-name">عيادة النور البصرية</div>
+  <div class="pin-subtitle">أدخل رمز PIN للدخول</div>
+  <div class="pin-dots" id="pin-dots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div class="pin-error" id="pin-error"></div>
+  <div class="pin-grid">
+    <button class="pin-key" onclick="pinKey('1')">1<span class="pin-sub"></span></button>
+    <button class="pin-key" onclick="pinKey('2')">2<span class="pin-sub">ABC</span></button>
+    <button class="pin-key" onclick="pinKey('3')">3<span class="pin-sub">DEF</span></button>
+    <button class="pin-key" onclick="pinKey('4')">4<span class="pin-sub">GHI</span></button>
+    <button class="pin-key" onclick="pinKey('5')">5<span class="pin-sub">JKL</span></button>
+    <button class="pin-key" onclick="pinKey('6')">6<span class="pin-sub">MNO</span></button>
+    <button class="pin-key" onclick="pinKey('7')">7<span class="pin-sub">PQRS</span></button>
+    <button class="pin-key" onclick="pinKey('8')">8<span class="pin-sub">TUV</span></button>
+    <button class="pin-key" onclick="pinKey('9')">9<span class="pin-sub">WXYZ</span></button>
+    <button class="pin-key pin-key-del" onclick="pinDel()">⌫</button>
+    <button class="pin-key" onclick="pinKey('0')">0</button>
+    <button class="pin-key pin-key-ok" onclick="pinSubmit()">دخول</button>
+  </div>
+  <div class="pin-setup" onclick="openPinSetup()" id="pin-setup-link">تغيير رمز PIN</div>
+</div>
+
+<!-- ══ BOTTOM TAB BAR (mobile) ══ -->
+<div id="tab-more-overlay" onclick="closeTabMore()"></div>
+<div id="tab-more-panel">
+  <button class="tab-more-item" onclick="showPage('debtors',null);closeTabMore()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+    المديونون
+  </button>
+  <button class="tab-more-item" onclick="showPage('reports',null);closeTabMore()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    التقارير
+  </button>
+  <button class="tab-more-item" onclick="showPage('lenses',null);closeTabMore()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    العدسات
+  </button>
+  <button class="tab-more-item" onclick="showPage('settings',null);closeTabMore()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    الإعدادات
+  </button>
+  <button class="tab-more-item" onclick="showPage('ledger',null);closeTabMore()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    سجل المراجعين
+  </button>
+  <button class="tab-more-item" onclick="lockApp();closeTabMore()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    قفل
+  </button>
+</div>
+
+<nav id="bottom-tab-bar">
+  <button class="tab-btn active" id="tab-entry" onclick="showPage('entry',this);setActiveTab('entry')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    وصفة
+  </button>
+  <button class="tab-btn" id="tab-followup" onclick="showPage('followup',this);setActiveTab('followup')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.64A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.72 6.72l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
+    المتابعة
+    <span class="tab-badge" id="tab-fu-badge" style="display:none">0</span>
+  </button>
+  <button class="tab-btn" id="tab-dashboard" onclick="showPage('dashboard',this);setActiveTab('dashboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    لوحة التحكم
+  </button>
+  <button class="tab-btn" id="tab-more" onclick="openTabMore()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+    المزيد
+  </button>
+</nav>
+
+<!-- ══ NOTIFICATION OVERLAY ══ -->
+<div id="notif-overlay" onclick="closeNotifPanel()"></div>
+<div id="notif-panel">
+  <div style="padding:12px 16px;font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em;background:var(--bg3);border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between">
+    <span>📅 مراجعات قادمة</span>
+    <button onclick="closeNotifPanel()" style="background:none;border:none;color:var(--txt3);cursor:pointer;font-size:16px">✕</button>
+  </div>
+  <div id="notif-list"></div>
+</div>
+
+<!-- ══ PIN CHANGE MODAL ══ -->
+<div class="modal-overlay" id="modal-pin-change">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-head"><div class="modal-title">تغيير رمز PIN</div><button class="close-btn" onclick="closeModal('modal-pin-change')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="fg"><label>الرمز الحالي (اتركه فارغاً إذا لم يكن لديك رمز)</label><input id="pin-old" type="password" inputmode="numeric" maxlength="6" placeholder="••••"></div>
+        <div class="fg"><label>الرمز الجديد (4-6 أرقام)</label><input id="pin-new" type="password" inputmode="numeric" maxlength="6" placeholder="••••"></div>
+        <div class="fg"><label>تأكيد الرمز الجديد</label><input id="pin-confirm" type="password" inputmode="numeric" maxlength="6" placeholder="••••"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pin-change')">إلغاء</button>
+      <button class="btn btn-primary" onclick="savePinChange()">حفظ الرمز</button>
+    </div>
+  </div>
+</div>
 <div id="app">
 
 <!-- ══ SIDEBAR ══ -->
@@ -861,7 +1210,8 @@ thead th.th-num{text-align:right;}
     <span>الإعدادات</span>
   </button>
 
-  <div class="sb-footer" id="sb-footer-txt">دينار عراقي · SQLite · محفوظ تلقائيًا</div>
+  <div class="sb-footer" id="sb-footer-txt">دينار عراقي · Supabase · محفوظ تلقائيًا</div>
+  <button onclick="lockApp()" style="background:none;border:none;cursor:pointer;padding:8px 18px 14px;font-size:12px;color:var(--txt3);text-align:right;width:100%;font-family:var(--font)">🔒 قفل التطبيق</button>
 </nav>
 
 <!-- ══ MAIN ══ -->
@@ -877,6 +1227,10 @@ thead th.th-num{text-align:right;}
       </div>
     </div>
     <div class="tb-right">
+      <button onclick="toggleNotifPanel()" class="btn btn-ghost btn-icon no-print" id="notif-btn" title="مراجعات قادمة" style="position:relative">
+        <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span id="notif-topbar-badge" class="notif-bell-badge" style="display:none">0</span>
+      </button>
       <span class="tb-date" id="today-date"></span>
       <button class="btn btn-ghost btn-sm no-print" onclick="window.location='/api/export/excel'">
         <svg style="width:13px;height:13px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="9" x2="9" y2="21"/><line x1="15" y1="9" x2="15" y2="21"/></svg>
@@ -1128,7 +1482,25 @@ thead th.th-num{text-align:right;}
 
       <div class="stats-grid" id="dash-stats"></div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <!-- Charts row -->
+      <div class="charts-grid" id="dash-charts-grid" style="margin-bottom:16px">
+        <div class="chart-card">
+          <div class="chart-title">
+            <span>📈 المبيعات — آخر 7 أيام</span>
+            <span id="dash-week-total" style="color:var(--acc);font-family:var(--mono)"></span>
+          </div>
+          <div class="chart-wrap" style="height:160px">
+            <canvas id="chart-sales"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">توزيع الإيرادات</div>
+          <div class="chart-wrap" style="height:140px">
+            <canvas id="chart-donut"></canvas>
+          </div>
+          <div class="donut-legend" id="donut-legend"></div>
+        </div>
+      </div>
         <div class="card"><div class="card-title">مرضى اليوم</div><div id="dash-today"></div></div>
         <div class="card"><div class="card-title">آخر 7 أيام</div><div id="dash-recent"></div></div>
       </div>
@@ -1285,6 +1657,8 @@ thead th.th-num{text-align:right;}
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn btn-ghost btn-sm" id="lang-toggle-btn" onclick="toggleLanguage()" title="Switch Language / تغيير اللغة" style="font-weight:700;min-width:80px">EN / عربي</button>
+          <button class="btn btn-ghost btn-sm" onclick="openPinSetup()">🔒 تغيير PIN</button>
+          <button class="btn btn-ghost btn-sm" onclick="lockApp()">قفل التطبيق</button>
           <button class="btn btn-ghost btn-sm" id="btn-backup" onclick="window.location='/api/backup'">نسخ احتياطي</button>
           <button class="btn btn-ghost btn-sm" onclick="document.getElementById('restore-file').click()">استعادة</button>
           <input type="file" id="restore-file" accept=".zip" style="display:none" onchange="doRestore(this)">
@@ -3329,27 +3703,367 @@ function updateAISuggestions(){
   ];
   sugs.forEach(([i,txt])=>{const el=document.getElementById('sug'+i);if(el)el.textContent=txt;});
 }
-// ── MOBILE NAV ──────────────────────────────────────────────────────────────
-function toggleMobNav(){
-  const sb  = document.getElementById('sidebar');
-  const ov  = document.getElementById('mob-overlay');
-  const open = sb.classList.toggle('mob-open');
-  ov.classList.toggle('open', open);
-  document.body.style.overflow = open ? 'hidden' : '';
+// ══════════════════════════════════════════════════════════════
+// PIN LOCK SYSTEM
+// ══════════════════════════════════════════════════════════════
+const PIN_KEY      = 'alnoor_pin';
+const PIN_SET_KEY  = 'alnoor_pin_set';
+const SESSION_KEY  = 'alnoor_unlocked';
+const DEFAULT_PIN  = '1234';
+
+let pinBuffer = '';
+let pinLength  = 4;
+
+function getPinHash(pin){ return btoa(pin + 'alnoor2024'); }
+
+function getStoredPin(){
+  return localStorage.getItem(PIN_KEY) || getPinHash(DEFAULT_PIN);
 }
-function closeMobNav(){
-  document.getElementById('sidebar').classList.remove('mob-open');
-  document.getElementById('mob-overlay').classList.remove('open');
-  document.body.style.overflow = '';
+
+function isPinSet(){
+  return !!localStorage.getItem(PIN_SET_KEY);
 }
-// Close mobile nav when a sidebar item is tapped
-(function(){
-  const origShow = window.showPage;
-  window.showPage = function(page, btn){
-    if(window.innerWidth <= 768) closeMobNav();
-    if(origShow) origShow(page, btn);
+
+function isUnlocked(){
+  return sessionStorage.getItem(SESSION_KEY) === '1';
+}
+
+function unlockApp(){
+  sessionStorage.setItem(SESSION_KEY,'1');
+  const ps = document.getElementById('pin-screen');
+  ps.classList.add('hiding');
+  setTimeout(()=>ps.classList.add('hidden'),300);
+}
+
+function lockApp(){
+  sessionStorage.removeItem(SESSION_KEY);
+  pinBuffer='';
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+  const ps = document.getElementById('pin-screen');
+  ps.classList.remove('hiding','hidden');
+}
+
+function pinKey(k){
+  if(pinBuffer.length >= 6) return;
+  pinBuffer += k;
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+  if(pinBuffer.length >= pinLength) setTimeout(pinSubmit,120);
+}
+
+function pinDel(){
+  pinBuffer = pinBuffer.slice(0,-1);
+  updatePinDots();
+}
+
+function updatePinDots(){
+  const dots = document.querySelectorAll('.pin-dot');
+  dots.forEach((d,i)=>{
+    d.classList.toggle('filled', i < pinBuffer.length);
+    d.classList.remove('error','success');
+  });
+}
+
+function pinSubmit(){
+  const stored = getStoredPin();
+  if(getPinHash(pinBuffer) === stored){
+    // Success flash
+    document.querySelectorAll('.pin-dot').forEach(d=>{
+      d.classList.add('success'); d.classList.remove('filled');
+    });
+    setTimeout(unlockApp, 400);
+  } else {
+    document.querySelectorAll('.pin-dot').forEach(d=>{
+      d.classList.add('error'); d.classList.remove('filled');
+    });
+    document.getElementById('pin-error').textContent = 'رمز غير صحيح، حاول مجدداً';
+    setTimeout(()=>{
+      pinBuffer='';
+      updatePinDots();
+    }, 700);
+  }
+}
+
+function openPinSetup(){
+  document.getElementById('pin-old').value='';
+  document.getElementById('pin-new').value='';
+  document.getElementById('pin-confirm').value='';
+  openM('modal-pin-change');
+}
+
+function savePinChange(){
+  const oldVal = document.getElementById('pin-old').value.trim();
+  const newVal = document.getElementById('pin-new').value.trim();
+  const conf   = document.getElementById('pin-confirm').value.trim();
+
+  // Validate old PIN (skip if no PIN set yet)
+  if(isPinSet() && getPinHash(oldVal) !== getStoredPin()){
+    toast('الرمز الحالي غير صحيح','red'); return;
+  }
+  if(!/^\d{4,6}$/.test(newVal)){
+    toast('الرمز يجب أن يكون 4 إلى 6 أرقام','red'); return;
+  }
+  if(newVal !== conf){
+    toast('الرمزان غير متطابقان','red'); return;
+  }
+  localStorage.setItem(PIN_KEY, getPinHash(newVal));
+  localStorage.setItem(PIN_SET_KEY, '1');
+  pinLength = newVal.length;
+  // update dots count
+  const dotsEl = document.getElementById('pin-dots');
+  dotsEl.innerHTML = Array.from({length:pinLength},(_,i)=>`<div class="pin-dot" id="pd${i}"></div>`).join('');
+  closeModal('modal-pin-change');
+  toast('تم حفظ رمز PIN بنجاح ✓','green');
+}
+
+// Check PIN on page load
+function checkPinOnLoad(){
+  if(!isUnlocked()){
+    // update clinic name on PIN screen from settings
+    const cn = document.getElementById('sb-clinic-name');
+    if(cn) document.getElementById('pin-clinic-name').textContent = cn.textContent;
+    // set correct dot count
+    const stored = localStorage.getItem(PIN_KEY);
+    if(stored){ /* pin exists, keep 4 dots */ }
+    if(!isPinSet()){
+      // first time — show hint
+      document.getElementById('pin-error').textContent='الرمز الافتراضي: 1234';
+    }
+  } else {
+    const ps = document.getElementById('pin-screen');
+    ps.classList.add('hidden');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// BOTTOM TAB BAR
+// ══════════════════════════════════════════════════════════════
+let _activeTab = 'entry';
+
+function setActiveTab(page){
+  _activeTab = page;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const map = {entry:'tab-entry',followup:'tab-followup',dashboard:'tab-dashboard'};
+  const btn = document.getElementById(map[page]||'tab-more');
+  if(btn) btn.classList.add('active');
+}
+
+function openTabMore(){
+  document.getElementById('tab-more-panel').classList.add('open');
+  document.getElementById('tab-more-overlay').classList.add('open');
+  document.getElementById('tab-more').classList.add('active');
+}
+function closeTabMore(){
+  document.getElementById('tab-more-panel').classList.remove('open');
+  document.getElementById('tab-more-overlay').classList.remove('open');
+  if(!['debtors','reports','lenses','settings','ledger'].includes(_activeTab)){
+    document.getElementById('tab-more').classList.remove('active');
+  }
+}
+
+// Patch showPage to sync tab bar
+const _origShowPage = window.showPage;
+window.showPage = function(page, btn){
+  if(_origShowPage) _origShowPage(page, btn);
+  setActiveTab(page);
+};
+
+// ══════════════════════════════════════════════════════════════
+// NOTIFICATION PANEL (follow-up reminders)
+// ══════════════════════════════════════════════════════════════
+function buildNotifList(){
+  if(!window.PTS) return;
+  const today    = new Date();
+  const upcoming = PTS.filter(p=>{
+    if(!p.next_review) return false;
+    const d   = new Date(p.next_review);
+    const diff = Math.ceil((d - today)/(1000*60*60*24));
+    return diff <= 30 && diff >= -7; // due within 30 days or up to 7 days overdue
+  }).sort((a,b)=>new Date(a.next_review)-new Date(b.next_review));
+
+  const badge = upcoming.length;
+  ['notif-topbar-badge','tab-fu-badge'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.textContent=badge; el.style.display=badge>0?'flex':'none'; }
+  });
+
+  const list = document.getElementById('notif-list');
+  if(!list) return;
+  if(!upcoming.length){
+    list.innerHTML='<div style="padding:24px;text-align:center;color:var(--txt3);font-size:14px">لا توجد مراجعات قادمة في الشهر القادم</div>';
+    return;
+  }
+  list.innerHTML = upcoming.map(p=>{
+    const d    = new Date(p.next_review);
+    const diff = Math.ceil((d - today)/(1000*60*60*24));
+    const urgent = diff <= 3;
+    const label  = diff < 0 ? `متأخر ${Math.abs(diff)} يوم` : diff===0 ? 'اليوم!' : `خلال ${diff} يوم`;
+    const initials = (p.name||'؟').charAt(0);
+    return `<div class="notif-item" onclick="closeNotifPanel();viewPatient(${p.id})">
+      <div class="notif-av${urgent?' urgent':''}">${initials}</div>
+      <div><div class="notif-name">${p.name||'—'}</div><div class="notif-due">${p.next_review} · ${p.phone||'—'}</div></div>
+      <div class="notif-days${urgent?' urgent':''}">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleNotifPanel(){
+  const panel = document.getElementById('notif-panel');
+  const overlay = document.getElementById('notif-overlay');
+  const isOpen = panel.classList.contains('open');
+  if(isOpen){ closeNotifPanel(); }
+  else { buildNotifList(); panel.classList.add('open'); overlay.classList.add('open'); }
+}
+function closeNotifPanel(){
+  document.getElementById('notif-panel').classList.remove('open');
+  document.getElementById('notif-overlay').classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════════════
+// DASHBOARD CHARTS
+// ══════════════════════════════════════════════════════════════
+let _chartSales  = null;
+let _chartDonut  = null;
+
+function getChartColors(){
+  const style = getComputedStyle(document.documentElement);
+  return {
+    acc  : style.getPropertyValue('--acc').trim()  || '#1e3a5f',
+    grn  : style.getPropertyValue('--grn').trim()  || '#166534',
+    amb  : style.getPropertyValue('--amb').trim()  || '#78350f',
+    red  : style.getPropertyValue('--red').trim()  || '#7f1d1d',
+    txt3 : style.getPropertyValue('--txt3').trim() || '#8a90a0',
+    bdr  : style.getPropertyValue('--bdr').trim()  || '#e4e6ea',
   };
-})();
+}
+
+function buildDashCharts(){
+  if(!window.PTS) return;
+  const c = getChartColors();
+
+  // ── 7-day sales bar chart ──
+  const days = [];
+  const labels = [];
+  const today = new Date();
+  for(let i=6;i>=0;i--){
+    const d = new Date(today);
+    d.setDate(d.getDate()-i);
+    const iso = d.toISOString().split('T')[0];
+    const dayPts = PTS.filter(p=>p.admission_date===iso);
+    const total  = dayPts.reduce((s,p)=>s+(p.total_cost||0),0);
+    days.push(total);
+    labels.push(['أحد','إثن','ثلث','أرب','خمس','جمع','سبت'][d.getDay()]);
+  }
+  const weekTotal = days.reduce((a,b)=>a+b,0);
+  const el = document.getElementById('dash-week-total');
+  if(el) el.textContent = fmtNum(weekTotal);
+
+  const salesCtx = document.getElementById('chart-sales');
+  if(salesCtx){
+    if(_chartSales){ _chartSales.destroy(); }
+    _chartSales = new Chart(salesCtx, {
+      type:'bar',
+      data:{
+        labels,
+        datasets:[{
+          data:days,
+          backgroundColor: days.map((v,i)=> i===6 ? c.acc : c.acc+'33'),
+          borderColor    : days.map((v,i)=> i===6 ? c.acc : c.acc+'66'),
+          borderWidth:1,borderRadius:6,
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{
+          callbacks:{label:ctx=>' '+fmtNum(ctx.raw)+' د.ع'}
+        }},
+        scales:{
+          y:{
+            grid:{color:c.bdr},
+            ticks:{color:c.txt3,font:{size:10},callback:v=>fmtNum(v)},
+            border:{display:false},
+          },
+          x:{grid:{display:false},ticks:{color:c.txt3,font:{size:11}},border:{display:false}}
+        }
+      }
+    });
+  }
+
+  // ── Donut: revenue breakdown ──
+  const checkupRev = PTS.reduce((s,p)=>s+((p.checkup_done&&p.checkup_paid)?(p.checkup_fee||5000):0),0);
+  const lensRev    = PTS.reduce((s,p)=>s+(p.lens1_cost||0)+(p.lens2_cost||0),0);
+  const frameRev   = PTS.reduce((s,p)=>s+(p.frame_cost||0),0);
+  const donutCtx   = document.getElementById('chart-donut');
+  const segments   = [
+    {label:'عدسات',   value:lensRev,    color:c.acc},
+    {label:'إطارات',  value:frameRev,   color:c.grn},
+    {label:'كشف',     value:checkupRev, color:c.amb},
+  ].filter(s=>s.value>0);
+
+  if(donutCtx && segments.length){
+    if(_chartDonut){ _chartDonut.destroy(); }
+    _chartDonut = new Chart(donutCtx,{
+      type:'doughnut',
+      data:{
+        labels:segments.map(s=>s.label),
+        datasets:[{data:segments.map(s=>s.value),backgroundColor:segments.map(s=>s.color),borderWidth:3,borderColor:'var(--sur)',hoverOffset:6}]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,cutout:'68%',
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmtNum(ctx.raw)} د.ع`}}}
+      }
+    });
+    // Legend
+    const legend = document.getElementById('donut-legend');
+    if(legend){
+      const total = segments.reduce((s,x)=>s+x.value,0);
+      legend.innerHTML = segments.map(s=>`
+        <div class="donut-legend-item">
+          <div class="donut-legend-dot" style="background:${s.color}"></div>
+          <span style="flex:1;color:var(--txt2)">${s.label}</span>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--txt)">${total>0?Math.round(s.value/total*100):0}%</span>
+        </div>`).join('');
+    }
+  } else if(donutCtx){
+    // No data
+    const legend = document.getElementById('donut-legend');
+    if(legend) legend.innerHTML='<div style="color:var(--txt3);font-size:13px;text-align:center;padding:8px">لا توجد بيانات بعد</div>';
+  }
+}
+
+// Patch renderDashboard to also build charts + notif
+const _origRenderDash = window.renderDashboard;
+window.renderDashboard = async function(){
+  if(_origRenderDash) await _origRenderDash();
+  buildDashCharts();
+  buildNotifList();
+};
+
+// ══════════════════════════════════════════════════════════════
+// MOBILE NAV (override old hamburger-based one)
+// ══════════════════════════════════════════════════════════════
+function toggleMobNav(){ /* no-op — replaced by bottom tab bar */ }
+function closeMobNav(){  /* no-op */ }
+
+// ══════════════════════════════════════════════════════════════
+// PATCH INIT
+// ══════════════════════════════════════════════════════════════
+const _origInit = window.init;
+window.init = async function(){
+  checkPinOnLoad();
+  if(_origInit) await _origInit();
+  buildNotifList();
+  // Update PIN screen clinic name after settings load
+  const cn = document.getElementById('sb-clinic-name');
+  if(cn) document.getElementById('pin-clinic-name').textContent = cn.textContent;
+};
+
+// ── helper used in charts ──
+function fmtNum(n){
+  if(n===undefined||n===null) return '0';
+  return Math.round(n).toLocaleString('ar-IQ');
+}
 
 document.addEventListener('DOMContentLoaded',init);
 </script>
