@@ -617,98 +617,55 @@ thead th.th-num{text-align:right;}
 
 /* ── PRINT ── */
 @media print{
-  /* ── Single A5 page, no theme bleed ── */
-  @page{size:A5;margin:8mm 10mm;}
-  @page :first{margin:8mm 10mm;}
+  @page{size:A5;margin:10mm 12mm;}
+  *,*::before,*::after{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  /* Base: patient details use Helvetica/Arial */
+  html,body{overflow:visible !important;height:auto;background:white;color:#000000;font-size:12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;}
+  #app{display:block;height:auto;}
+  #sidebar,#topbar,#ai-bubble,.no-print{display:none !important;}
+  #content{overflow:visible;}
+  .page{display:none !important;}
+  #print-area{display:block !important;width:100%;max-width:100%;}
 
-  *,*::before,*::after{
-    -webkit-print-color-adjust:exact !important;
-    print-color-adjust:exact !important;
-    box-shadow:none !important;
-    text-shadow:none !important;
-  }
+  /* Header / clinic info */
+  .ph{text-align:center;margin-bottom:18px;padding-bottom:14px;border-bottom:2.5px solid #1a4a6e;}
+  .ph-logo{max-width:140px;max-height:90px;margin:0 auto 8px;display:block;}
+  .ph-doctor{font-size:14px;font-weight:700;color:#000000;margin-bottom:2px;}
+  .ph-phone{font-size:12px;color:#333333;margin-top:4px;}
+  .ph-loc{font-size:11.5px;color:#444444;margin-top:2px;}
+  .ph-ownership{font-size:11px;color:#555555;margin-top:3px;}
 
-  /* Reset everything to plain white — no theme variables */
-  html,body{
-    overflow:visible !important;height:auto !important;
-    background:#fff !important;color:#000 !important;
-    font-size:11px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-    width:148mm;           /* A5 width */
-  }
+  /* Patient bio */
+  .p-sec{font-size:10px;font-weight:700;color:#1a4a6e;text-transform:uppercase;letter-spacing:.08em;margin:13px 0 7px;padding-bottom:4px;border-bottom:1px solid #d0d8e4;}
+  .p-bio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:13px;}
+  .p-bio-item .pk{font-size:9.5px;color:#555555;text-transform:uppercase;font-weight:700;text-align:right;}
+  .p-bio-item .pv{font-size:13px;font-weight:700;color:#000000;margin-top:1px;text-align:right;}
 
-  /* Hide ALL UI chrome */
-  #app,#sidebar,#topbar,#main,#content,
-  #ai-bubble,#bottom-tab-bar,#tab-more-panel,#tab-more-overlay,
-  #notif-panel,#notif-overlay,#pin-screen,
-  .page,.modal-overlay,
-  .no-print{display:none !important;}
+  /* Rx prescription table */
+  .p-rx{width:100%;border-collapse:collapse;margin-bottom:12px;direction:ltr;}
+  .p-rx th{padding:7px 9px;background:#eef2f8;font-size:10.5px;font-weight:700;color:#1a4a6e;text-align:center;border:1px solid #c8d4e4;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;}
+  .p-rx td{padding:7px 9px;text-align:center;border:1px solid #d8dde6;font-family:'JetBrains Mono','Courier New',Courier,monospace;font-size:12pt;font-weight:700;color:#000000;letter-spacing:0.04em;font-variant-numeric:tabular-nums;}
+  .p-rx tr:nth-child(even) td{background:#f8fafc;}
+  .p-rx .eye{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;color:#1a4a6e;text-align:center;letter-spacing:normal;}
 
-  /* Show ONLY the print area */
-  #print-area{
-    display:block !important;
-    position:static !important;
-    width:100% !important;
-    max-width:148mm !important;
-    margin:0 !important;
-    padding:0 !important;
-    page-break-after:avoid;
-    orphans:3;widows:3;
-  }
-
-  /* Prevent any second page */
-  #print-area *{page-break-inside:avoid;}
-
-  /* ── Clinic header ── */
-  .ph{text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #1a3a5c;}
-  .ph-doctor{font-size:13px;font-weight:700;color:#000;margin-bottom:2px;}
-  .ph-phone{font-size:11px;color:#333;margin-top:3px;}
-  .ph-loc{font-size:10.5px;color:#444;margin-top:2px;}
-  .ph-ownership{font-size:10px;color:#555;margin-top:2px;}
-
-  /* ── Patient bio ── */
-  .p-sec{font-size:9px;font-weight:700;color:#1a3a5c;text-transform:uppercase;
-    letter-spacing:.07em;margin:10px 0 5px;padding-bottom:3px;border-bottom:1px solid #ccc;}
-  .p-bio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
-  .p-bio-item .pk{font-size:8.5px;color:#555;text-transform:uppercase;font-weight:700;text-align:right;}
-  .p-bio-item .pv{font-size:12px;font-weight:700;color:#000;margin-top:1px;text-align:right;}
-
-  /* ── Rx table — monospaced for clinical accuracy ── */
-  .p-rx{width:100%;border-collapse:collapse;margin-bottom:10px;direction:ltr;}
-  .p-rx th{padding:5px 7px;background:#eef2f8 !important;font-size:9.5px;font-weight:700;
-    color:#1a3a5c !important;text-align:center;border:1px solid #b8cde0;
-    font-family:Helvetica,Arial,sans-serif;}
-  .p-rx td{padding:5px 7px;text-align:center;border:1px solid #ccd8e4;
-    font-family:'JetBrains Mono','Courier New',Courier,monospace;
-    font-size:11pt;font-weight:700;color:#000 !important;
-    letter-spacing:.03em;font-variant-numeric:tabular-nums;}
-  .p-rx tr:nth-child(even) td{background:#f6f9fc !important;}
-  .p-rx .eye{font-family:Helvetica,Arial,sans-serif;font-size:10px;
-    font-weight:700;color:#1a3a5c !important;}
-
-  /* ── Chips ── */
-  .p-chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-  .p-chip{padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;
-    border:1px solid #bbb;}
-  .p-chip-blue{background:#eef2f8 !important;color:#1a3a5c !important;border-color:#b8c8de;}
-  .p-chip-green{background:#edf7f2 !important;color:#1a5c3a !important;border-color:#b8d8c4;}
-  .p-chip-purple{background:#f3edf8 !important;color:#3a1a5c !important;border-color:#c4b8d8;}
-
-  /* ── Notes & review ── */
-  .p-review{background:#fff8ee !important;border:1px solid #e8d090;border-radius:4px;
-    padding:6px 10px;margin-bottom:10px;font-size:11px;color:#000;}
+  /* Chips, notes, review */
+  .p-chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;}
+  .p-chip{padding:3px 11px;border-radius:12px;font-size:11.5px;font-weight:700;}
+  .p-chip-blue{background:#eef2f8;color:#1a4a6e;border:1px solid #b8c8de;}
+  .p-chip-green{background:#eefaf4;color:#1a6e4a;border:1px solid #b8dec8;}
+  .p-chip-purple{background:#f4eefa;color:#4a1a6e;border:1px solid #c8b8de;}
+  .p-review{background:#fff8ee;border:1px solid #f0d8a8;border-radius:6px;padding:8px 13px;margin-bottom:12px;font-size:12px;color:#000000;}
   .p-review strong{color:#5a3800;}
-  .p-notes{background:#f0f4f8 !important;border:1px solid #ccd4e0;border-radius:4px;
-    padding:6px 10px;margin-bottom:10px;font-size:11px;color:#000;}
+  .p-notes{background:#f0f4f8;border:1px solid #d0d8e4;border-radius:6px;padding:8px 13px;margin-bottom:12px;font-size:12px;color:#000000;}
 
-  /* ── Financial totals ── */
-  .p-ledger-total,.p-tot,tfoot td,tfoot th{
-    font-family:'JetBrains Mono','Courier New',Courier,monospace !important;
-    font-size:11pt !important;font-weight:700 !important;color:#000 !important;}
+  /* Ledger totals row */
+  .p-ledger-total,.p-tot,tfoot td,tfoot th,tr.total-row td,tr.total-row th{font-family:'JetBrains Mono','Courier New',Courier,monospace !important;font-size:12pt !important;font-weight:700 !important;color:#000000 !important;font-variant-numeric:tabular-nums;}
 
-  /* ── Footer ── */
-  .p-footer{margin-top:14px;padding-top:10px;border-top:2px solid #1a3a5c;
-    display:flex;justify-content:space-between;align-items:flex-start;
-    font-size:10px;color:#333;}
+  /* Footer & QR */
+  .p-footer{margin-top:18px;padding-top:12px;border-top:2px solid #1a4a6e;display:flex;justify-content:space-between;align-items:flex-start;font-size:11.5px;color:#333333;}
+  .p-footer-qr{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .p-footer-qr img{width:70px;height:70px;}
+  .p-footer-qr span{font-size:9.5px;color:#555555;text-align:center;}
 }
 #print-area{display:none;}
 
@@ -839,10 +796,12 @@ canvas{display:block;width:100% !important;}
   .search-box{max-width:none;width:100%;}
   .rep-row{min-width:540px;}
 
-  /* ─ rx table ─ */
-  .rx-table th,.rx-table td{padding:5px 4px;font-size:12px;}
-  .sign-btn{width:26px;height:32px;}
-  .rx-field input,.rx-plain{width:58px;}
+  /* ─ rx table — scrolls horizontally on mobile ─ */
+  .rx-card{overflow:visible;}
+  .rx-table th,.rx-table td{padding:4px 3px;font-size:11.5px;white-space:nowrap;}
+  .sign-btn{width:24px;height:30px;font-size:13px;}
+  .rx-field input,.rx-plain{width:52px;font-size:12px;padding:5px 3px;}
+  .rx-eye-label{font-size:12px;width:44px;}
 
   /* ─ chips ─ */
   .chip{padding:7px 12px;font-size:13px;}
@@ -1193,7 +1152,8 @@ canvas{display:block;width:100% !important;}
             <button class="btn btn-ghost btn-sm" style="color:white;border-color:rgba(255,255,255,.3)" onclick="copyODtoOS()">نسخ OD ← OS</button>
           </div>
         </div>
-        <table class="rx-table">
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -1px">
+        <table class="rx-table" style="min-width:520px">
           <thead>
             <tr><th style="width:55px">Rx</th><th>SPH</th><th>CYL</th><th>AXS</th><th>ADD</th><th>IPD</th><th>VA</th><th>BCVA</th></tr>
           </thead>
@@ -1220,6 +1180,7 @@ canvas{display:block;width:100% !important;}
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <!-- Order Details -->
