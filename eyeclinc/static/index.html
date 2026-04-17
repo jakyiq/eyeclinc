@@ -619,10 +619,12 @@ thead th.th-num{text-align:right;}
 @media print{
   @page{size:A5;margin:10mm 12mm;}
   *,*::before,*::after{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  /* Base: patient details use Helvetica/Arial */
   html,body{overflow:visible !important;height:auto;background:white;color:#000000;font-size:12px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;}
   #app{display:block;height:auto;}
-  #sidebar,#topbar,#ai-bubble,.no-print{display:none !important;}
+  #sidebar,#topbar,#ai-bubble,
+  #bottom-tab-bar,#tab-more-panel,#tab-more-overlay,
+  #notif-panel,#pin-screen,
+  .no-print{display:none !important;}
   #content{overflow:visible;}
   .page{display:none !important;}
   #print-area{display:block !important;width:100%;max-width:100%;}
@@ -658,10 +660,10 @@ thead th.th-num{text-align:right;}
   .p-review strong{color:#5a3800;}
   .p-notes{background:#f0f4f8;border:1px solid #d0d8e4;border-radius:6px;padding:8px 13px;margin-bottom:12px;font-size:12px;color:#000000;}
 
-  /* Ledger totals row */
+  /* Ledger totals */
   .p-ledger-total,.p-tot,tfoot td,tfoot th,tr.total-row td,tr.total-row th{font-family:'JetBrains Mono','Courier New',Courier,monospace !important;font-size:12pt !important;font-weight:700 !important;color:#000000 !important;font-variant-numeric:tabular-nums;}
 
-  /* Footer & QR */
+  /* Footer with QR */
   .p-footer{margin-top:18px;padding-top:12px;border-top:2px solid #1a4a6e;display:flex;justify-content:space-between;align-items:flex-start;font-size:11.5px;color:#333333;}
   .p-footer-qr{display:flex;flex-direction:column;align-items:center;gap:4px;}
   .p-footer-qr img{width:70px;height:70px;}
@@ -3284,62 +3286,58 @@ function buildPrintHtml(p){
   const fmt=v=>v!==null&&v!==undefined&&v!==''?(parseFloat(v)>=0?'+':'')+parseFloat(v).toFixed(2):'—';
   const feats=[];
   if(p.rxtype){
-    const labelsAr={sphere:'sphere',cylinder:'cylinder',bifocal:'bifocal',progressive:'Progressive',reading:'Reading'};
-    const labelsEn={sphere:'Sphere',cylinder:'Cylinder',bifocal:'Bifocal',progressive:'Progressive',reading:'Reading'};
-    const rxLabels=LANG==='en'?labelsEn:labelsAr;
+    const rxLabels={sphere:'Sphere',cylinder:'Cylinder',bifocal:'Bifocal',progressive:'Progressive',reading:'Reading'};
     feats.push(`<span class="p-chip p-chip-blue">${rxLabels[p.rxtype]||p.rxtype}</span>`);
   }
   if(p.material){
-    // Contact lens always printed in English; plastic/glass bilingual
-    const matLabelsAr={plastic:'plastic',glass:'glass',contact:' Contact Lens'};
-    const matLabelsEn={plastic:'Plastic',glass:'Glass',contact:'Plastic Contact Lens'};
-    const matLabels=LANG==='en'?matLabelsEn:matLabelsAr;
+    const matLabels={plastic:'Plastic',glass:'Glass',contact:'Contact Lens'};
     feats.push(`<span class="p-chip p-chip-green">${matLabels[p.material]||p.material}</span>`);
   }
-  // Features/coatings — always in English for print
-  const featLabels=FILTER_LABELS;
-  const featSrc=p.features?(Array.isArray(p.features)?p.features:(()=>{try{return JSON.parse(p.features);}catch(e){return [];}})()):[];
+  const featLabels=FILTER_LABELS||{};
+  const featSrc=p.features?(Array.isArray(p.features)?p.features:(()=>{try{return JSON.parse(p.features);}catch(e){return [];}})()):[]; 
   featSrc.forEach(f=>{if(featLabels[f])feats.push(`<span class="p-chip p-chip-purple">${featLabels[f]}</span>`);});
-  const phone1=SETS.phone1||'';const phone2=SETS.phone2||'';
-  const location=SETS.location||'';
-  const doctorName=SETS.doctor_name||'';
-  const owner=SETS.owner||'';const ownerTitle=SETS.owner_title||'';const ownerPhone=SETS.owner_phone||'';const hours=SETS.hours||'';
-  const specialty=SETS.specialty||'';
-  const printDir=LANG==='en'?'ltr':'rtl';
-  return `<div style="direction:${printDir};text-align:${printDir==='rtl'?'right':'left'}">
+  const phone1=(SETS&&SETS.phone1)||'';
+  const phone2=(SETS&&SETS.phone2)||'';
+  const location=(SETS&&SETS.location)||'';
+  const doctorName=(SETS&&SETS.doctor_name)||'';
+  const owner=(SETS&&SETS.owner)||'';
+  const ownerTitle=(SETS&&SETS.owner_title)||'';
+  const ownerPhone=(SETS&&SETS.owner_phone)||'';
+  const hours=(SETS&&SETS.hours)||'';
+  const specialty=(SETS&&SETS.specialty)||'';
+  return `<div style="direction:rtl;text-align:right">
   <div class="ph">
     <img src="data:image/png;base64,${LOGO_B64}" class="ph-logo" alt="شعار العيادة">
     ${doctorName?`<div class="ph-doctor">${doctorName}</div>`:''}
     ${specialty?`<div class="ph-phone" style="font-style:italic;color:#777">${specialty}</div>`:''}
-    ${(phone1||phone2)?`<div class="ph-phone">${PHONE_ICON} ${[phone1,phone2].filter(Boolean).join(' · ')}</div>`:''}
-    ${location?`<div class="ph-loc">${LOC_ICON} ${location}</div>`:''}
+    ${(phone1||phone2)?`<div class="ph-phone">📞 ${[phone1,phone2].filter(Boolean).join(' · ')}</div>`:''}
+    ${location?`<div class="ph-loc">📍 ${location}</div>`:''}
     ${(owner||ownerTitle)?`<div class="ph-ownership">${ownerTitle?ownerTitle+': ':''}${owner}</div>`:''}
   </div>
-  <div class="p-sec">${LANG==='en'?'Patient Information':'Patient Information'}</div>
+  <div class="p-sec">Patient Information</div>
   <div class="p-bio">
-    <div class="p-bio-item"><div class="pk">${LANG==='en'?'Name':'Name'}</div><div class="pv">${p.name||'—'}</div></div>
-    <div class="p-bio-item"><div class="pk">${LANG==='en'?'Age':'Age'}</div><div class="pv">${p.age||'—'}</div></div>
-    <div class="p-bio-item"><div class="pk">${LANG==='en'?'Date':'Date'}</div><div class="pv">${fmtDateEn(p.admission_date)}</div></div>
+    <div class="p-bio-item"><div class="pk">Name</div><div class="pv">${p.name||'—'}</div></div>
+    <div class="p-bio-item"><div class="pk">Age</div><div class="pv">${p.age||'—'}</div></div>
+    <div class="p-bio-item"><div class="pk">Date</div><div class="pv">${fmtDateEn?fmtDateEn(p.admission_date):(p.admission_date||'—')}</div></div>
   </div>
-  <div class="p-sec">Rx — ${LANG==='en'?'Prescription':'Prescription'}</div>
+  <div class="p-sec">RX — Prescription</div>
   <table class="p-rx">
     <thead><tr><th>Rx</th><th>SPH</th><th>CYL</th><th>AXS</th><th>ADD</th><th>IPD</th><th>VA</th><th>BCVA</th></tr></thead>
     <tbody>
-      <tr><td class="eye">OD ${LANG==='en'?'(Right)':'(Right)'}</td><td>${fmt(p.od_sph)}</td><td>${fmt(p.od_cyl)}</td><td>${p.od_axis||'—'}°</td><td>${p.od_add||'—'}</td><td>${p.pd||'—'}</td><td>${p.od_va||'—'}</td><td>${p.od_bcva||'—'}</td></tr>
-      <tr><td class="eye">OS ${LANG==='en'?'(Left)':'(Left)'}</td><td>${fmt(p.os_sph)}</td><td>${fmt(p.os_cyl)}</td><td>${p.os_axis||'—'}°</td><td>${p.os_add||'—'}</td><td>${p.pd||'—'}</td><td>${p.os_va||'—'}</td><td>${p.os_bcva||'—'}</td></tr>
+      <tr><td class="eye">OD (Right)</td><td>${fmt(p.od_sph)}</td><td>${fmt(p.od_cyl)}</td><td>${p.od_axis||'—'}°</td><td>${p.od_add||'—'}</td><td>${p.pd||p.od_ipd||'—'}</td><td>${p.od_va||'—'}</td><td>${p.od_bcva||'—'}</td></tr>
+      <tr><td class="eye">OS (Left)</td><td>${fmt(p.os_sph)}</td><td>${fmt(p.os_cyl)}</td><td>${p.os_axis||'—'}°</td><td>${p.os_add||'—'}</td><td>${p.pd||p.os_ipd||'—'}</td><td>${p.os_va||'—'}</td><td>${p.os_bcva||'—'}</td></tr>
     </tbody>
   </table>
-  ${feats.length?`<div class="p-sec">${LANG==='en'?'Features & Coatings':'التصنيف والمميزات'}</div><div class="p-chips">${feats.join('')}</div>`:''}
-  <div class="p-review"><strong>${LANG==='en'?'Next Review Date:':'موعد المراجعة القادمة:'}</strong> ${fmtDateEn(nextReview(p.admission_date))}</div>
-  ${p.notes?`<div class="p-notes"><strong>${LANG==='en'?'Notes:':'ملاحظات:'}</strong> ${p.notes}</div>`:''}
+  ${feats.length?`<div class="p-sec">Features & Coatings</div><div class="p-chips">${feats.join('')}</div>`:''}
+  <div class="p-review"><strong>موعد المراجعة القادمة:</strong> ${(typeof nextReview==='function'&&typeof fmtDateEn==='function')?fmtDateEn(nextReview(p.admission_date)):(p.review_date||'—')}</div>
+  ${p.notes?`<div class="p-notes"><strong>ملاحظات:</strong> ${p.notes}</div>`:''}
   <div class="p-footer">
     <div>
-      ${(ownerPhone||hours)?`${ownerPhone?`<div style="font-size:11px;color:#555">${PHONE_ICON} ${ownerPhone}</div>`:''}
-      ${hours?`<div style="font-size:11px;color:#555">${CLOCK_ICON} ${hours}</div>`:''}`:''}
+      ${ownerPhone?`<div style="font-size:11px;color:#555">📞 ${ownerPhone}</div>`:''}
+      ${hours?`<div style="font-size:11px;color:#555">🕐 ${hours}</div>`:''}
     </div>
     <div class="p-footer-qr">
-      ${location?`<img src="data:image/png;base64,${QR_B64}" alt="QR location">
-      <span>${LOC_ICON} ${location}</span>`:''}
+      ${location?`<img src="data:image/png;base64,${QR_B64}" alt="QR"><span>📍 ${location}</span>`:''}
     </div>
   </div></div>`;
 }
