@@ -618,47 +618,43 @@ thead th.th-num{text-align:right;}
 /* ── PRINT ── */
 @media print{
   @page{size:A5 portrait;margin:10mm 12mm;}
+
   *,*::before,*::after{
     -webkit-print-color-adjust:exact !important;
     print-color-adjust:exact !important;
-    box-shadow:none !important;text-shadow:none !important;
+    box-shadow:none !important;
+    text-shadow:none !important;
   }
 
-  /* ── Pure white body, normal flow ── */
+  /* ── The nuclear option: hide EVERY direct child of body except print-area ──
+     This kills notif-panel, modals, #app, pin-screen — everything outside #app too */
+  body > *{display:none !important;}
+  body > #print-area{display:block !important;}
+
+  /* ── Body: pure white, full width, auto height ── */
   html,body{
-    background:#ffffff !important;color:#000000 !important;
+    background:#ffffff !important;
+    color:#000000 !important;
     font-family:'Helvetica Neue',Helvetica,Arial,sans-serif !important;
     font-size:11.5px !important;
-    height:auto !important;overflow:visible !important;
-    margin:0 !important;padding:0 !important;
-    /* NO width:148mm — that breaks page layout on mobile Chrome/Android */
+    height:auto !important;
+    width:auto !important;
+    overflow:visible !important;
+    margin:0 !important;
+    padding:0 !important;
   }
 
-  /* ── Collapse the app shell without hiding content ── */
-  #app{display:block !important;height:auto !important;background:#fff !important;}
-  #main{display:block !important;height:auto !important;overflow:visible !important;background:#fff !important;}
-  #content{display:block !important;height:auto !important;overflow:visible !important;background:#fff !important;}
-
-  /* ── Hide every UI element except #print-area ── */
-  #sidebar,#topbar,#ai-bubble,
-  #bottom-tab-bar,#tab-more-panel,#tab-more-overlay,
-  #notif-panel,#pin-screen,
-  .no-print{display:none !important;}
-
-  /* ── This is the critical fix for Page 1 problem:
-       Hide ALL pages including the active one.
-       Use body > #app > #main > #content selector to kill any specificity war ── */
-  .page{display:none !important;}
-  #content > .page{display:none !important;}
-  #content > .page.active{display:none !important;}
-
-  /* ── Only show the print area ── */
+  /* ── Print area fills the page ── */
   #print-area{
     display:block !important;
-    position:static !important;
     width:100% !important;
-    margin:0 !important;padding:0 !important;
-    background:#ffffff !important;color:#000000 !important;
+    height:auto !important;
+    margin:0 !important;
+    padding:0 !important;
+    background:#ffffff !important;
+    color:#000000 !important;
+    position:static !important;
+    overflow:visible !important;
   }
 
   /* ── Clinic header ── */
@@ -670,45 +666,35 @@ thead th.th-num{text-align:right;}
   .ph-ownership{font-size:10.5px;color:#555555;margin-top:2px;}
 
   /* ── Patient info ── */
-  .p-sec{font-size:9.5px;font-weight:700;color:#1a4a6e;text-transform:uppercase;
-    letter-spacing:.08em;margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid #d0d8e4;}
+  .p-sec{
+    font-size:9.5px;font-weight:700;color:#1a4a6e;
+    text-transform:uppercase;letter-spacing:.08em;
+    margin:12px 0 6px;padding-bottom:4px;border-bottom:1px solid #d0d8e4;
+  }
   .p-bio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
   .p-bio-item .pk{font-size:9px;color:#555555;text-transform:uppercase;font-weight:700;text-align:right;}
   .p-bio-item .pv{font-size:12.5px;font-weight:700;color:#000000;margin-top:1px;text-align:right;}
 
-  /* ── Rx table ──
-     Key fix: OD/OS column is wider, font smaller so "OD (Right)" fits.
-     table-layout:fixed + explicit widths keep all 8 cols on one line. ── */
-  .p-rx{
-    width:100%;border-collapse:collapse;margin-bottom:11px;
-    direction:ltr;table-layout:fixed;
-  }
+  /* ── Rx table ── */
+  .p-rx{width:100%;border-collapse:collapse;margin-bottom:11px;direction:ltr;table-layout:fixed;}
+  .p-rx th:first-child,.p-rx td:first-child{width:17%;}
+  .p-rx th:not(:first-child),.p-rx td:not(:first-child){width:11.8%;}
   .p-rx th{
     padding:6px 4px;font-size:9.5px;font-weight:700;
     color:#1a4a6e;background:#eef2f8 !important;
     text-align:center;border:1px solid #c8d4e4;
-    font-family:Helvetica,Arial,sans-serif;
-    overflow:hidden;
+    font-family:Helvetica,Arial,sans-serif;overflow:hidden;
   }
-  /* First column (Rx/Eye label) gets more room */
-  .p-rx th:first-child,.p-rx td:first-child{width:18%;}
-  /* Data columns share the rest equally */
-  .p-rx th:not(:first-child),.p-rx td:not(:first-child){width:11.7%;}
-
   .p-rx td{
-    padding:6px 3px;text-align:center;
-    border:1px solid #d8dde6;
+    padding:6px 3px;text-align:center;border:1px solid #d8dde6;
     font-family:'Courier New',Courier,monospace;
     font-size:10.5px;font-weight:700;color:#000000;
-    letter-spacing:.02em;font-variant-numeric:tabular-nums;
-    overflow:hidden;
+    letter-spacing:.02em;font-variant-numeric:tabular-nums;overflow:hidden;
   }
   .p-rx tr:nth-child(even) td{background:#f8fafc !important;}
-  /* Eye label — shorter abbreviation, fits any column width */
   .p-rx .eye{
     font-family:Helvetica,Arial,sans-serif;
-    font-size:10px;font-weight:700;color:#1a4a6e;
-    text-align:center;
+    font-size:10px;font-weight:700;color:#1a4a6e;text-align:center;
   }
 
   /* ── Chips ── */
@@ -719,16 +705,22 @@ thead th.th-num{text-align:right;}
   .p-chip-purple{background:#f4eefa !important;color:#4a1a6e !important;border:1px solid #c8b8de;}
 
   /* ── Review & Notes ── */
-  .p-review{background:#fff8ee !important;border:1px solid #f0d8a8;border-radius:5px;
-    padding:7px 12px;margin-bottom:11px;font-size:11.5px;color:#000000;}
+  .p-review{
+    background:#fff8ee !important;border:1px solid #f0d8a8;border-radius:5px;
+    padding:7px 12px;margin-bottom:11px;font-size:11.5px;color:#000000;
+  }
   .p-review strong{color:#5a3800;}
-  .p-notes{background:#f0f4f8 !important;border:1px solid #d0d8e4;border-radius:5px;
-    padding:7px 12px;margin-bottom:11px;font-size:11.5px;color:#000000;}
+  .p-notes{
+    background:#f0f4f8 !important;border:1px solid #d0d8e4;border-radius:5px;
+    padding:7px 12px;margin-bottom:11px;font-size:11.5px;color:#000000;
+  }
 
   /* ── Footer with QR ── */
-  .p-footer{margin-top:16px;padding-top:10px;border-top:2px solid #1a4a6e;
+  .p-footer{
+    margin-top:16px;padding-top:10px;border-top:2px solid #1a4a6e;
     display:flex;justify-content:space-between;align-items:flex-start;
-    font-size:11px;color:#333333;}
+    font-size:11px;color:#333333;
+  }
   .p-footer-qr{display:flex;flex-direction:column;align-items:center;gap:4px;}
   .p-footer-qr img{width:65px !important;height:65px !important;display:block;}
   .p-footer-qr span{font-size:9px;color:#555555;text-align:center;}
@@ -1937,7 +1929,6 @@ canvas{display:block;width:100% !important;}
   </div>
 </div>
 
-<div id="print-area"></div>
 <div id="toast"></div>
 
 <script>
@@ -3884,5 +3875,7 @@ document.addEventListener('DOMContentLoaded', async function(){
   if(cn && pn) pn.textContent = cn.textContent;
 });
 </script>
+
+<div id="print-area"></div>
 </body>
 </html>
