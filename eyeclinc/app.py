@@ -480,16 +480,32 @@ def reports():
         start = request.args.get("start", (date.today() - timedelta(days=7)).isoformat())
         end   = request.args.get("end",   today())
         db    = get_db()
-        pts   = sb_rows(db.table("patients").select("*")
-                          .gte("admission_date", start).lte("admission_date", end)
-                          .order("admission_date", desc=True).execute())
-        op_costs = sb_rows(db.table("op_costs").select("*").execute())
+
+        # Patients in range
+        pts = sb_rows(db.table("patients").select("*")
+                        .gte("admission_date", start).lte("admission_date", end)
+                        .order("admission_date", desc=True).execute())
+
+        # Restocks in range
+        restocks = sb_rows(db.table("lens_restocks").select("*")
+                             .gte("date", start).lte("date", end)
+                             .order("date", desc=True).execute())
+
+        # Custom sales in range
+        custom_sales = sb_rows(db.table("custom_sales").select("*")
+                                 .gte("date", start).lte("date", end)
+                                 .order("date", desc=True).execute())
+
+        # Op costs
+        op_costs_rows = sb_rows(db.table("op_costs").select("*").execute())
+
         try:
             days = max(1, (datetime.strptime(end,"%Y-%m-%d") - datetime.strptime(start,"%Y-%m-%d")).days + 1)
         except Exception:
             days = 7
+
         op_est = 0.0
-        for r in op_costs:
+        for r in op_costs_rows:
             amt  = _float(r.get("amount"))
             freq = _str(r.get("frequency"))
             if freq=="weekly":    op_est += amt*(days/7)
@@ -497,13 +513,33 @@ def reports():
             elif freq=="yearly":  op_est += amt*(days/365)
             elif freq=="daily":   op_est += amt*days
             elif freq=="once":    op_est += amt/52
+
+        # Revenue breakdown
+        lens_rev     = sum((_float(p.get("lens1_cost")) + _float(p.get("lens2_cost"))) for p in pts)
+        frame_rev    = sum(_float(p.get("frame_cost")) for p in pts)
+        checkup_rev  = sum(_float(p.get("checkup_fee") or 0) for p in pts)
+        custom_rev   = sum(_float(s.get("total")) for s in custom_sales)
+        gross_rev    = lens_rev + frame_rev + checkup_rev + custom_rev
+        collected    = sum(_float(p.get("amount_paid")) for p in pts)
+        restock_cost = sum((_float(r.get("qty",0)) * _float(r.get("cost_per_unit",0))) for r in restocks)
+        gross_profit = round(gross_rev - restock_cost - op_est, 2)
+
         return jsonify({
-            "patients":        pts,
-            "total_sales":     sum(_float(p.get("total_cost"))  for p in pts),
-            "total_collected": sum(_float(p.get("amount_paid")) for p in pts),
-            "total_debt":      sum(max(0.0,_float(p.get("total_cost"))-_float(p.get("amount_paid"))) for p in pts),
-            "op_est": round(op_est,2),
-            "net":    round(sum(_float(p.get("total_cost")) for p in pts) - op_est, 2),
+            "patients":     pts,
+            "restocks":     restocks,
+            "custom_sales": custom_sales,
+            "op_costs":     op_costs_rows,
+            "stats": {
+                "gross_revenue":   round(gross_rev, 2),
+                "collected":       round(collected, 2),
+                "lens_revenue":    round(lens_rev, 2),
+                "frame_revenue":   round(frame_rev, 2),
+                "checkup_revenue": round(checkup_rev, 2),
+                "custom_sales":    round(custom_rev, 2),
+                "restock_cost":    round(restock_cost, 2),
+                "op_costs":        round(op_est, 2),
+                "gross_profit":    gross_profit,
+            }
         })
     except Exception as e:
         return err(e)
@@ -598,6 +634,7 @@ def save_custom_sale():
         item_name = _str(d.get("item_name"))
         category  = _str(d.get("category")) or "متنوعة"
         notes     = _str(d.get("notes"))
+        lens_id   = _int(d.get("lens_id"))
         db        = get_db()
         payload   = {"date":sale_date,"item_name":item_name,"category":category,
                      "qty":qty,"unit_price":price,"total":total,"notes":notes}
@@ -612,6 +649,14 @@ def save_custom_sale():
             db.table("ledger").insert({"date":sale_date,"entry_type":"income","category":category,
                 "description":f"{item_name} × {qty}","total_amount":total,"paid_amount":total,
                 "is_expense":False,"source_ref":f"custom_sale:{sid}"}).execute()
+            if lens_id:
+                try:
+                    row = sb_one(db.table("lenses").select("stock").eq("id",lens_id).execute())
+                    if row:
+                        new_stock = max(0, _int(row.get("stock"),0) - qty)
+                        db.table("lenses").update({"stock": new_stock}).eq("id",lens_id).execute()
+                except Exception:
+                    pass
         return jsonify({"ok":True,"id":sid})
     except Exception as e:
         return err(e)
