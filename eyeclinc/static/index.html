@@ -1171,6 +1171,7 @@ canvas{display:block;width:100% !important;}
             <div class="chip" data-val="bifocal" onclick="toggleChip(this,'rxtype','blue')">Bifocal</div>
             <div class="chip" data-val="progressive" onclick="toggleChip(this,'rxtype','blue')">Progressive</div>
             <div class="chip" data-val="reading" onclick="toggleChip(this,'rxtype','blue')">Reading</div>
+            <div class="chip" data-val="plano"   onclick="toggleChip(this,'rxtype','blue');lockPlanoFields(this)">Plano (Zero)</div>
           </div>
         </div>
         <div class="triple-card">
@@ -1526,6 +1527,7 @@ canvas{display:block;width:100% !important;}
             <option value="sphere">كروي</option>
             <option value="cylinder">أسطواني</option>
             <option value="plano">بلانو</option>
+            <option value="sphcyl">SPH + CYL</option>
             <option value="---" disabled>── فلتر النوع ──</option>
             <option value="f:white">Clear / White</option>
             <option value="f:bluecut">Blue Light Cut</option>
@@ -1822,6 +1824,7 @@ canvas{display:block;width:100% !important;}
           <div class="chip-group" id="ln-chips-cat">
             <div class="chip" data-val="sphere"   onclick="lnChip(this,'cat','green')">كروي (Sphere)</div>
             <div class="chip" data-val="cylinder" onclick="lnChip(this,'cat','green')">أسطواني (Cylinder)</div>
+            <div class="chip" data-val="sphcyl"   onclick="lnChip(this,'cat','green')">SPH + CYL (كروي أسطواني)</div>
             <div class="chip" data-val="plano"    onclick="lnChip(this,'cat','green')">بلانو (Plano / Zero)</div>
           </div>
         </div>
@@ -2567,7 +2570,20 @@ function toggleChipMulti(el,color){
   if(idx>=0){selectedChips.features.splice(idx,1);el.className='chip';}
   else{selectedChips.features.push(val);el.className='chip selected-'+color;}
 }
-function resetChips(){selectedChips={rxtype:null,material:null,features:[]};document.querySelectorAll('.chip').forEach(c=>c.className='chip');}
+function resetChips(){selectedChips={rxtype:null,material:null,features:[]};document.querySelectorAll('.chip').forEach(c=>c.className='chip');
+  ['od-sph','od-cyl','os-sph','os-cyl'].forEach(id=>{const inp=document.getElementById(id);if(inp){inp.readOnly=false;inp.style.opacity='';}});
+}
+
+function lockPlanoFields(el){
+  const isPlano=el.classList.contains('selected-blue');
+  ['od-sph','od-cyl','os-sph','os-cyl'].forEach(id=>{
+    const inp=document.getElementById(id);
+    if(!inp)return;
+    if(isPlano){inp.value='0';inp.readOnly=true;inp.style.opacity='.45';}
+    else{inp.readOnly=false;inp.style.opacity='';}
+  });
+}
+
 
 // ── CHECKUP TOGGLES ──
 function toggleChkDone(btn){chkDone=!chkDone;btn.className='toggle'+(chkDone?' on':'');document.getElementById('chk-done-lbl').textContent=chkDone?'نعم':'لا';calcTotal();}
@@ -3007,6 +3023,7 @@ function renderLns(){
   else if(f==='sphere')list=list.filter(l=>l.category==='sphere');
   else if(f==='cylinder')list=list.filter(l=>l.category==='cylinder');
   else if(f==='plano')list=list.filter(l=>l.category==='plano'||parseFloat(l.sph||0)===0);
+  else if(f==='sphcyl')list=list.filter(l=>l.category==='sphcyl');
   else if(f.startsWith('f:'))list=list.filter(l=>(l.filter_type||'')===(f.slice(2)));
   const lowCount=lns.filter(l=>(l.stock||0)<=(l.reorder_point||5)).length;
   document.getElementById('lns-stats').innerHTML=[
@@ -3021,7 +3038,7 @@ function renderLns(){
   list.map(l=>{
     const low=(l.stock||0)<=(l.reorder_point||5);
     const margin=l.price&&l.price>0?Math.round((l.price-l.cost)/l.price*100):0;
-    const catAr=l.category==='sphere'?'كروي':l.category==='cylinder'?'أسطواني':l.category==='plano'?'بلانو':'—';
+    const catAr=l.category==='sphere'?'كروي':l.category==='cylinder'?'أسطواني':l.category==='plano'?'بلانو':l.category==='sphcyl'?'SPH+CYL':'—';
     return `<tr>
       <td class="td-name">${l.lens_type||'—'}<div class="td-id">${l.material||''}</div></td>
       <td><span class="badge badge-blue">${catAr}</span></td>
@@ -3252,9 +3269,13 @@ function csFilterLenses(){
     <span style="color:var(--txt3);font-size:12px">مخزون:${l.stock} · ${IQD(l.price||l.cost||0)}</span>
   </div>`).join('');
 }
+let csSelectedLensId=null;
 function csSelectLens(id){
   const l=lns.find(x=>x.id===id);if(!l)return;
-  document.getElementById('cs-item').value=`${l.lens_type} SPH${l.sph} CYL${l.cyl||'0'} ${filterLabel(l.filter_type)}`.trim();
+  csSelectedLensId=id;
+  const sph=l.sph!==null&&l.sph!==undefined?`SPH${l.sph}`:'';
+  const cyl=(l.cyl&&parseFloat(l.cyl)!==0)?` CYL${l.cyl}`:'';
+  document.getElementById('cs-item').value=`${l.lens_type||''} ${sph}${cyl} ${filterLabel(l.filter_type)}`.trim();
   document.getElementById('cs-price').value=l.price||l.cost||0;
   document.getElementById('cs-qty').value=1;
   csCalcTotal();
@@ -3283,7 +3304,7 @@ function renderCustomSales(list){
   </tr>`).join('')+'</tbody></table>';
 }
 function openCsModal(){
-  eCS=null;
+  eCS=null;csSelectedLensId=null;
   ['cs-item','cs-notes','cs-lens-search'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('cs-qty').value=1;
   document.getElementById('cs-price').value=0;
@@ -3307,11 +3328,13 @@ async function saveCustomSale(){
     qty,
     unit_price:price,
     notes:document.getElementById('cs-notes').value.trim(),
-    date:document.getElementById('cs-date').value||td()
+    date:document.getElementById('cs-date').value||td(),
+    lens_id:csSelectedLensId||null
   });
   if(r&&r.ok){
     closeModal('modal-cs');
     toast('✅ تم تسجيل البيع','green');
+    lns=await api('/api/lenses');renderLenses();
     await loadReports();
   } else {
     toast('خطأ: '+(r&&r.error?r.error:'فشل الاتصال بالخادم'),'red');
@@ -3341,7 +3364,7 @@ function buildPrintHtml(p){
   const fmt=v=>v!==null&&v!==undefined&&v!==''?(parseFloat(v)>=0?'+':'')+parseFloat(v).toFixed(2):'—';
   const feats=[];
   if(p.rxtype){
-    const rxLabels={sphere:'Sphere',cylinder:'Cylinder',bifocal:'Bifocal',progressive:'Progressive',reading:'Reading'};
+    const rxLabels={sphere:'Sphere',cylinder:'Cylinder',bifocal:'Bifocal',progressive:'Progressive',reading:'Reading',plano:'Plano (Zero)'};
     feats.push(`<span class="p-chip p-chip-blue">${rxLabels[p.rxtype]||p.rxtype}</span>`);
   }
   if(p.material){
