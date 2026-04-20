@@ -637,7 +637,8 @@ def save_custom_sale():
         lens_id   = _int(d.get("lens_id"))
         db        = get_db()
         payload   = {"date":sale_date,"item_name":item_name,"category":category,
-                     "qty":qty,"unit_price":price,"total":total,"notes":notes}
+                     "qty":qty,"unit_price":price,"total":total,"notes":notes,
+                     "lens_id":lens_id or None}
         if sid:
             db.table("custom_sales").update(payload).eq("id",sid).execute()
             db.table("ledger").update({"date":sale_date,"description":f"{item_name} × {qty}",
@@ -666,8 +667,21 @@ def save_custom_sale():
 def delete_custom_sale(sid):
     try:
         db = get_db()
+        # Fetch sale before deleting so we can restore stock
+        sale_rows = sb_rows(db.table("custom_sales").select("lens_id,qty").eq("id",sid).execute())
         db.table("custom_sales").delete().eq("id",sid).execute()
         db.table("ledger").delete().eq("source_ref",f"custom_sale:{sid}").execute()
+        # Restore lens stock if this sale deducted from inventory
+        if sale_rows:
+            lid = _int(sale_rows[0].get("lens_id"))
+            qty = _int(sale_rows[0].get("qty"), 1)
+            if lid and qty > 0:
+                try:
+                    row = sb_one(db.table("lenses").select("stock").eq("id",lid).execute())
+                    if row:
+                        db.table("lenses").update({"stock": _int(row.get("stock"),0) + qty}).eq("id",lid).execute()
+                except Exception:
+                    pass
         return jsonify({"ok":True})
     except Exception as e:
         return err(e)
@@ -744,6 +758,145 @@ def restore():
                 db.table(tbl).insert(rows[i:i+100]).execute()
             summary[tbl] = len(rows)
         return jsonify({"ok": True, "restored": summary})
+    except Exception as e:
+        return err(e)
+
+
+
+# ══ EXCEL EXPORT ══════════════════════════════════════════════════════════════
+
+@app.route("/api/export/excel", methods=["GET"])
+def export_excel():
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        db = get_db()
+
+        wb = openpyxl.Workbook()
+
+        # ── helpers ──────────────────────────────────────────────────────────
+        HDR_FILL  = PatternFill("solid", fgColor="1E3A5F")
+        HDR_FONT  = Font(bold=True, color="FFFFFF", size=11)
+        ALT_FILL  = PatternFill("solid", fgColor="F0F4FA")
+        THIN      = Side(style="thin", color="D0D5DD")
+        BORDER    = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+        CENTER    = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        RIGHT     = Alignment(horizontal="right", vertical="center")
+
+        def style_header(ws, headers):
+            ws.append(headers)
+            for col, _ in enumerate(headers, 1):
+                cell = ws.cell(1, col)
+                cell.fill  = HDR_FILL
+                cell.font  = HDR_FONT
+                cell.alignment = CENTER
+                cell.border = BORDER
+                ws.column_dimensions[get_column_letter(col)].width = max(14, len(str(headers[col-1]))*2)
+
+        def style_row(ws, row_idx, num_cols):
+            fill = ALT_FILL if row_idx % 2 == 0 else None
+            for col in range(1, num_cols+1):
+                cell = ws.cell(row_idx, col)
+                if fill: cell.fill = fill
+                cell.border = BORDER
+                cell.alignment = RIGHT
+
+        def fmt_date(v):
+            if not v: return ""
+            try: return str(v)[:10]
+            except: return str(v)
+
+        def iq(v):
+            try: return int(float(v or 0))
+            except: return 0
+
+        # ── Sheet 1: Patients ──────────────────────────────────────────────
+        ws1 = wb.active
+        ws1.title = "سجل المراجعين"
+        hdrs1 = ["التاريخ","الاسم","العمر","الهاتف","نوع الوصفة","إجمالي البيع","المدفوع","المتبقي","حالة الدفع","كشف طبي","العنوان","ملاحظات"]
+        style_header(ws1, hdrs1)
+        patients = sb_rows(db.table("patients").select("*").order("admission_date", desc=True).execute())
+        for i, p in enumerate(patients, 2):
+            total  = iq(p.get("total_cost") or p.get("total_sale"))
+            paid   = iq(p.get("amount_paid"))
+            rem    = total - paid
+            status = "مدفوع بالكامل" if rem <= 0 else ("دفع جزئي" if paid > 0 else "لم يدفع")
+            checkup = "نعم" if p.get("checkup_done") else "لا"
+            row = [
+                fmt_date(p.get("admission_date")), p.get("name",""), str(p.get("age","")),
+                str(p.get("phone","")), str(p.get("rxtype","")),
+                total, paid, rem, status, checkup,
+                str(p.get("address","")), str(p.get("notes",""))
+            ]
+            ws1.append(row)
+            style_row(ws1, i, len(hdrs1))
+        ws1.freeze_panes = "A2"
+
+        # ── Sheet 2: Lenses ────────────────────────────────────────────────
+        ws2 = wb.create_sheet("مخزون العدسات")
+        hdrs2 = ["نوع العدسة","الفئة","التصفية","المادة","SPH","CYL","المخزون","نقطة الإعادة","التكلفة","سعر البيع","الهامش%"]
+        style_header(ws2, hdrs2)
+        lenses = sb_rows(db.table("lenses").select("*").order("lens_type").execute())
+        for i, l in enumerate(lenses, 2):
+            cost  = _float(l.get("cost"))
+            price = _float(l.get("price"))
+            margin = round((price-cost)/price*100) if price else 0
+            row = [
+                str(l.get("lens_type","")), str(l.get("category","")),
+                str(l.get("filter_type","")), str(l.get("material","")),
+                str(l.get("sph","")), str(l.get("cyl","")),
+                _int(l.get("stock")), _int(l.get("reorder_point"),5),
+                cost, price, margin
+            ]
+            ws2.append(row)
+            style_row(ws2, i, len(hdrs2))
+        ws2.freeze_panes = "A2"
+
+        # ── Sheet 3: Custom Sales ──────────────────────────────────────────
+        ws3 = wb.create_sheet("المبيعات المتنوعة")
+        hdrs3 = ["التاريخ","المنتج","الفئة","الكمية","سعر الوحدة","الإجمالي"]
+        style_header(ws3, hdrs3)
+        csales = sb_rows(db.table("custom_sales").select("*").order("date", desc=True).execute())
+        for i, s in enumerate(csales, 2):
+            qty   = _int(s.get("qty"),1)
+            price = _float(s.get("price"))
+            row = [
+                fmt_date(s.get("date")), str(s.get("product","")),
+                str(s.get("category","")), qty, price, round(qty*price)
+            ]
+            ws3.append(row)
+            style_row(ws3, i, len(hdrs3))
+        ws3.freeze_panes = "A2"
+
+        # ── Sheet 4: Op Costs ──────────────────────────────────────────────
+        ws4 = wb.create_sheet("التكاليف التشغيلية")
+        hdrs4 = ["التاريخ","البند","الفئة","المبلغ","ملاحظات"]
+        style_header(ws4, hdrs4)
+        opcosts = sb_rows(db.table("op_costs").select("*").order("date", desc=True).execute())
+        for i, o in enumerate(opcosts, 2):
+            row = [
+                fmt_date(o.get("date")), str(o.get("description","")),
+                str(o.get("category","")), _float(o.get("amount")), str(o.get("notes",""))
+            ]
+            ws4.append(row)
+            style_row(ws4, i, len(hdrs4))
+        ws4.freeze_panes = "A2"
+
+        # ── Save & send ────────────────────────────────────────────────────
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        from datetime import date as _date
+        fname = f"noor_clinic_{_date.today().isoformat()}.xlsx"
+        return send_file(
+            buf,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=fname
+        )
+    except ImportError:
+        return jsonify({"error": "openpyxl not installed. Add openpyxl to requirements.txt and redeploy."}), 503
     except Exception as e:
         return err(e)
 
