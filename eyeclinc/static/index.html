@@ -169,19 +169,24 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--fo
   padding:9px 12px;margin:1px 8px;
   border-radius:var(--radius-sm);cursor:pointer;
   font-size:13.5px;color:var(--txt2);
-  transition:all .15s ease;border:none;background:none;
+  transition:background .18s ease, color .18s ease, transform .15s cubic-bezier(.34,1.56,.64,1);
+  border:1px solid transparent;background:none;
   width:calc(100% - 16px);font-family:var(--font);
   font-weight:500;
 }
-.sb-btn:hover{background:var(--bg2);color:var(--txt);}
+.sb-btn:hover{background:var(--bg2);color:var(--txt);transform:translateX(-2px);}
+[data-dir="rtl"] .sb-btn:hover,.sb-btn:hover{transform:translateX(-2px);}
+.sb-btn:active{transform:scale(.97);}
 .sb-btn.active{
   background:var(--acc-s);
   color:var(--acc);font-weight:600;
   border:1px solid var(--acc-m);
+  transform:none;
 }
-.sb-icon{width:15px;height:15px;flex-shrink:0;opacity:.6;}
-.sb-btn.active .sb-icon{opacity:1;color:var(--acc);}
-.sb-dot{width:6px;height:6px;border-radius:50%;background:var(--bdr3);margin-inline-start:auto;flex-shrink:0;}
+.sb-icon{width:15px;height:15px;flex-shrink:0;opacity:.6;transition:opacity .18s,color .18s,transform .2s cubic-bezier(.34,1.56,.64,1);}
+.sb-btn:hover .sb-icon{opacity:.85;}
+.sb-btn.active .sb-icon{opacity:1;color:var(--acc);transform:scale(1.15);}
+.sb-dot{width:6px;height:6px;border-radius:50%;background:var(--bdr3);margin-inline-start:auto;flex-shrink:0;transition:background .2s,box-shadow .2s;}
 .sb-btn.active .sb-dot{background:var(--acc);box-shadow:0 0 0 3px var(--acc-s);}
 .sb-badge{
   margin-inline-start:auto;
@@ -243,9 +248,23 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--fo
 
 /* ── CONTENT ── */
 #content{flex:1;overflow-y:auto;background:var(--bg);}
-.page{display:none;padding:24px 26px;}
-.page.active{display:block;animation:fadeIn .2s ease;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.page{
+  display:none;padding:24px 26px;
+  animation-fill-mode:both;
+  animation-duration:.3s;
+  animation-timing-function:cubic-bezier(.22,.68,0,1.2);
+}
+.page.active{display:block;}
+.page.anim-in{animation-name:pageSlideIn;}
+.page.anim-out{animation-name:pageSlideOut;animation-duration:.18s;animation-timing-function:ease-in;pointer-events:none;}
+@keyframes pageSlideIn{
+  from{opacity:0;transform:translateY(14px) scale(.98);}
+  to  {opacity:1;transform:translateY(0)    scale(1);}
+}
+@keyframes pageSlideOut{
+  from{opacity:1;transform:translateY(0);}
+  to  {opacity:0;transform:translateY(-8px);}
+}
 .page-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;}
 .page-title{font-size:21px;font-weight:700;letter-spacing:-.4px;color:var(--txt);font-family:var(--font-display);}
 .page-sub{font-size:13px;color:var(--txt3);margin-top:4px;}
@@ -889,11 +908,24 @@ canvas{display:block;width:100% !important;}
     flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:3px;background:none;border:none;cursor:pointer;color:var(--txt3);
     font-family:var(--font);font-size:10px;font-weight:600;padding:6px 2px;
-    -webkit-tap-highlight-color:transparent;transition:color .15s;position:relative;
+    -webkit-tap-highlight-color:transparent;
+    transition:color .2s cubic-bezier(.34,1.56,.64,1);position:relative;
   }
-  .tab-btn svg{width:21px;height:21px;}
+  .tab-btn svg{
+    width:21px;height:21px;
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1), opacity .15s;
+  }
+  .tab-btn:active svg{transform:scale(.88);}
   .tab-btn.active{color:var(--acc);}
-  .tab-btn.active svg{transform:scale(1.1);}
+  .tab-btn.active svg{transform:scale(1.18);}
+  .tab-btn::after{
+    content:'';position:absolute;bottom:4px;left:50%;
+    transform:translateX(-50%) scaleX(0);
+    width:20px;height:3px;border-radius:2px;background:var(--acc);
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1), opacity .2s;
+    opacity:0;
+  }
+  .tab-btn.active::after{transform:translateX(-50%) scaleX(1);opacity:1;}
   .tab-badge{
     position:absolute;top:4px;right:calc(50% - 20px);
     background:var(--red);color:white;font-size:9px;font-weight:800;
@@ -935,6 +967,80 @@ canvas{display:block;width:100% !important;}
   #main{overflow:visible;}
   #content{overflow:visible;height:auto;}
 }
+
+/* ── REPORTS MOBILE ── */
+@media(max-width:640px){
+  /* Stack the 2-col layout vertically */
+  .rep-main-grid{grid-template-columns:1fr!important;}
+
+  /* Stats: 2 per row */
+  #rep-stats{grid-template-columns:1fr 1fr!important;}
+
+  /* Patient rows: show Date + Name + Total + Status only */
+  .rep-head-row,.rep-pt-row{
+    grid-template-columns:80px 1fr 80px 72px!important;
+    font-size:11.5px;
+    padding:8px 12px!important;
+  }
+  /* Hide Lens / Frame / Paid columns on mobile */
+  .rep-head-row span:nth-child(3),
+  .rep-head-row span:nth-child(4),
+  .rep-head-row span:nth-child(6),
+  .rep-pt-row span:nth-child(3),
+  .rep-pt-row span:nth-child(4),
+  .rep-pt-row span:nth-child(6){display:none;}
+
+  .rep-date{font-size:10.5px;}
+
+  /* Breakdown card: smaller text */
+  #rep-breakdown .cr{font-size:12.5px;padding:6px 0;}
+  #rep-breakdown .cr-tot{font-size:13.5px;}
+
+  /* Restock table scroll */
+  #rep-restocks table{min-width:380px;}
+
+  /* Custom sales table */
+  #rep-custom-sales table{min-width:380px;}
+
+  /* Page header: stack controls */
+  #page-reports .page-head>div:last-child{
+    width:100%;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:6px!important;
+  }
+  #page-reports .page-head>div:last-child input[type="date"]{
+    width:100%!important;
+  }
+  #page-reports .page-head>div:last-child .btn{
+    width:100%;justify-content:center;
+  }
+}
+/* ── RIPPLE ── */
+.ripple-host{position:relative;overflow:hidden;}
+@keyframes ripple{to{transform:scale(4);opacity:0;}}
+.ripple-wave{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,.28);
+  transform:scale(0);animation:ripple .5s linear;
+  pointer-events:none;
+}
+[data-theme="dark"] .ripple-wave{background:rgba(255,255,255,.15);}
+
+/* ── TAB BAR RIPPLE HOST ── */
+.tab-btn{overflow:hidden;}
+.tab-more-item{overflow:hidden;}
+
+/* ── STAT CARD HOVER LIFT ── */
+.stat-card{transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s ease;}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.10);}
+
+/* ── CARD HOVER ── */
+.card{transition:box-shadow .2s ease;}
+
+/* ── BTN PRESS ── */
+.btn{transition:background .15s,color .15s,border-color .15s,transform .12s,box-shadow .15s;}
+.btn:active:not(:disabled){transform:scale(.96);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -1454,14 +1560,14 @@ canvas{display:block;width:100% !important;}
 
     <!-- ══ REPORTS ══ -->
     <div class="page" id="page-reports">
-      <div class="page-head">
-        <div><div class="page-title">التقارير</div><div class="page-sub">المبيعات اليومية والأسبوعية والتكاليف والأرباح</div></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input type="date" id="rep-start" style="width:145px">
-          <input type="date" id="rep-end" style="width:145px">
+      <div class="page-head" style="flex-wrap:wrap;gap:10px">
+        <div><div class="page-title">التقارير</div><div class="page-sub">تحليل المبيعات والتكاليف والأرباح</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;row-gap:8px">
+          <input type="date" id="rep-start" style="width:135px;font-size:13px;flex:1;min-width:110px">
+          <input type="date" id="rep-end" style="width:135px;font-size:13px;flex:1;min-width:110px">
           <button class="btn btn-ghost btn-sm" onclick="loadReports()">إنشاء</button>
           <button class="btn btn-tel btn-sm" onclick="openCsModal()">+ بيع متنوع</button>
-          <button class="btn btn-green btn-sm" onclick="window.location='/api/export/excel'">📊 تصدير Excel (4 جداول)</button>
+          <button class="btn btn-green btn-sm" onclick="window.location='/api/export/excel'">📊 تصدير Excel</button>
         </div>
       </div>
 
@@ -1469,10 +1575,10 @@ canvas{display:block;width:100% !important;}
       <div class="stats-grid" id="rep-stats"></div>
 
       <!-- Revenue breakdown -->
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px" class="rep-main-grid">
         <div class="card" style="padding:0;overflow:hidden">
           <div style="padding:12px 16px;font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em;background:var(--bg3);border-bottom:1px solid var(--bdr)">سجل المراجعين— تفصيل الإيرادات</div>
-          <div class="rep-row head" style="grid-template-columns:110px 1fr 90px 90px 100px 100px 90px"><span>التاريخ</span><span>المريض</span><span>عدسات</span><span>إطار</span><span>الإجمالي</span><span>المدفوع</span><span>الحالة</span></div>
+          <div class="rep-row head rep-head-row" style="grid-template-columns:110px 1fr 90px 90px 100px 100px 90px"><span>التاريخ</span><span>المريض</span><span>عدسات</span><span>إطار</span><span>الإجمالي</span><span>المدفوع</span><span>الحالة</span></div>
           <div id="rep-body"></div>
         </div>
         <div class="card">
@@ -2394,11 +2500,29 @@ function loadTheme(){
 
 // ── NAV ──
 function showPage(id,btn){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  // ── fluid page transition ──────────────────────────────────────
+  const prevPage = document.querySelector('.page.active');
+  const nextPage = document.getElementById('page-'+id);
+  if(prevPage && prevPage !== nextPage){
+    prevPage.classList.add('anim-out');
+    prevPage.addEventListener('animationend', function handler(){
+      prevPage.classList.remove('active','anim-out');
+      prevPage.removeEventListener('animationend',handler);
+    },{once:true});
+  } else if(prevPage){
+    prevPage.classList.remove('active');
+  }
+  if(nextPage){
+    nextPage.classList.add('active','anim-in');
+    nextPage.addEventListener('animationend', function handler(){
+      nextPage.classList.remove('anim-in');
+      nextPage.removeEventListener('animationend',handler);
+    },{once:true});
+  }
+  // ── sidebar highlight ─────────────────────────────────────────
   document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
-  const page=document.getElementById('page-'+id);if(page)page.classList.add('active');
   if(btn)btn.classList.add('active');
-  else{const nb=document.querySelector(`.sb-btn[onclick*="'${id}'"]`);if(nb)nb.classList.add('active');}
+  else{const nb=document.querySelector('[class*="sb-btn"][onclick*="\''+id+'\'"]');if(nb)nb.classList.add('active');}
   currentPage=id;
   const titles={entry:'وصفة جديدة',followup:'مكالمات المتابعة',dashboard:'لوحة التحكم',ledger:'سجل المراجعين',debtors:'المديونون',reports:'التقارير',lenses:'مخزون العدسات',settings:'الإعدادات'};
   const subs={entry:'أدخل بيانات المريض والوصفة الطبية',followup:'تابع المراجعين الذين حان موعد مراجعتهم',dashboard:'نظرة عامة على اليوم وتحليلات العيادة',ledger:'جميع سجلات المراجعين',debtors:'الموردون والأشخاص الذين نحن مدينون لهم',reports:'تحليل المبيعات والتكاليف والأرباح',lenses:'تتبع مخزون العدسات والأسعار',settings:'معلومات العيادة والسمات والنسخ الاحتياطي'};
@@ -3053,6 +3177,7 @@ function renderLns(){
       <td><div style="display:flex;gap:5px">
         <button class="btn btn-tel btn-sm" onclick="openRestock(${l.id})">+مخزون</button>
         <button class="btn btn-ghost btn-sm" onclick="openLnsModal(${l.id})">تعديل</button>
+        <button class="btn btn-ghost btn-sm" onclick="duplicateLens(${l.id})" title="نسخ العدسة كقالب">📋</button>
         <button class="btn btn-red btn-sm" onclick="delLn(${l.id})">✕</button>
       </div></td>
     </tr>`;
@@ -3123,6 +3248,29 @@ async function saveLens(){
   }
   closeModal('modal-lns');toast(eLens?'تم تحديث العدسة':'تم حفظ العدسة','green');await loadLns();
 }
+
+function duplicateLens(id){
+  const l=lns.find(x=>x.id===id);
+  if(!l)return;
+  // Open modal with all data pre-filled but no id (new record)
+  eLens=null;
+  document.getElementById('lns-modal-title').textContent='نسخ عدسة (جديدة)';
+  lnChipReset();
+  document.getElementById('ln-sph').value=l.sph||'';
+  document.getElementById('ln-cyl').value=l.cyl||'0.00';
+  document.getElementById('ln-tint').value=l.tint||'';
+  document.getElementById('ln-stock').value=0;
+  document.getElementById('ln-reorder').value=l.reorder_point||5;
+  document.getElementById('ln-cost').value=l.cost||0;
+  document.getElementById('ln-price').value=l.price||0;
+  if(l.lens_type)  lnChipSet('type',  l.lens_type,   'blue');
+  if(l.category)   lnChipSet('cat',   l.category,    'green');
+  if(l.material)   lnChipSet('mat',   l.material,    'green');
+  if(l.filter_type)lnChipSet('filter',l.filter_type, 'amber');
+  document.getElementById('ln-add-ledger').className='toggle';
+  openM('modal-lns');
+  toast('عدّل التفاصيل واحفظ كعدسة جديدة','blue');
+}
 async function delLn(id){if(!confirm('حذف هذه العدسة؟'))return;await api('/api/lenses/'+id,'DELETE');await loadLns();}
 function openRestock(id){
   restockId=id;const l=lns.find(x=>x.id===id);
@@ -3178,7 +3326,7 @@ async function loadReports(){
   list.map(p=>{
     const rem=(p.total_cost||0)-(p.amount_paid||0);
     const statusBadge=rem<=0?'<span class="badge badge-green">مدفوع</span>':p.amount_paid>0?'<span class="badge badge-amb">جزئي</span>':'<span class="badge badge-red">غير مدفوع</span>';
-    return `<div class="rep-row" onclick="viewPt(${p.id})" style="cursor:pointer;grid-template-columns:110px 1fr 90px 90px 100px 100px 90px">
+    return `<div class="rep-row rep-pt-row" onclick="viewPt(${p.id})" style="cursor:pointer;grid-template-columns:110px 1fr 90px 90px 100px 100px 90px">
       <span class="rep-date">${fmtDate(p.admission_date)}</span><span>${p.name||'—'}</span>
       <span class="rep-pos">${IQD((p.lens1_cost||0)+(p.lens2_cost||0))}</span>
       <span class="rep-pos">${IQD(p.frame_cost||0)}</span>
@@ -3341,10 +3489,13 @@ async function saveCustomSale(){
   }
 }
 async function delCustomSale(id){
-  if(!confirm('حذف هذا البيع؟'))return;
+  if(!confirm('حذف هذا البيع؟ سيتم استعادة المخزون إن وُجد.'))return;
   const r=await api('/api/custom-sales/'+id,'DELETE');
-  if(r&&r.ok){toast('تم الحذف','red');await loadReports();}
-  else toast('خطأ في الحذف','red');
+  if(r&&r.ok){
+    toast('تم الحذف — المخزون استُعيد','red');
+    lns=await api('/api/lenses');renderLns();
+    await loadReports();
+  } else toast('خطأ في الحذف','red');
 }
 
 // ── SETTINGS ──
@@ -3900,5 +4051,24 @@ document.addEventListener('DOMContentLoaded', async function(){
 </script>
 
 <div id="print-area"></div>
+
+/* ── RIPPLE HELPER ──────────────────────────────────────────────── */
+(function(){
+  function spawnRipple(el, e){
+    const r = el.getBoundingClientRect();
+    const size = Math.max(r.width, r.height) * 1.6;
+    const x = (e.clientX - r.left) - size/2;
+    const y = (e.clientY - r.top)  - size/2;
+    const wave = document.createElement('span');
+    wave.className = 'ripple-wave';
+    wave.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
+    el.appendChild(wave);
+    wave.addEventListener('animationend', ()=>wave.remove());
+  }
+  document.addEventListener('pointerdown', function(e){
+    const el = e.target.closest('.tab-btn, .tab-more-item, .btn-primary, .btn-tel, .btn-green');
+    if(el) spawnRipple(el, e);
+  }, {passive:true});
+})();
 </body>
 </html>
