@@ -140,6 +140,7 @@ def save_patient():
             "lens1_cost"   : _float(d.get("lens1_cost"),   0.0),
             "lens2_id"     : _int(d.get("lens2_id")),
             "lens2_cost"   : _float(d.get("lens2_cost"),   0.0),
+            "frame_price"  : _float(d.get("frame_price"),  0.0),
             "frame_cost"   : _float(d.get("frame_cost"),   0.0),
             "total_cost"   : _float(d.get("total_cost"),   0.0),
             "amount_paid"  : _float(d.get("amount_paid"),  0.0),
@@ -516,7 +517,7 @@ def reports():
 
         # Revenue breakdown
         lens_rev     = sum((_float(p.get("lens1_cost")) + _float(p.get("lens2_cost"))) for p in pts)
-        frame_rev    = sum(_float(p.get("frame_cost")) for p in pts)
+        frame_rev    = sum(_float(p.get("frame_price") or p.get("frame_cost")) for p in pts)
         checkup_rev  = sum(_float(p.get("checkup_fee") or 0) for p in pts)
         custom_rev   = sum(_float(s.get("total")) for s in custom_sales)
         gross_rev    = lens_rev + frame_rev + checkup_rev + custom_rev

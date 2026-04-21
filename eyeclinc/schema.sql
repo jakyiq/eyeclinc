@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS patients (
     frame_name      TEXT,
     frame_type      TEXT,
     frame_cost      REAL    DEFAULT 0,
+    frame_price     REAL    DEFAULT 0,
     total_cost      REAL    DEFAULT 0,
     amount_paid     REAL    DEFAULT 0,
     rxtype          TEXT,
