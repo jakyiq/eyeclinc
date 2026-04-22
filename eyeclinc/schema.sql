@@ -191,3 +191,8 @@ BEGIN
         );
     END LOOP;
 END $$;
+
+-- ══════════════════════════════════════════════════════════════════
+-- MIGRATION: Run this in Supabase SQL Editor if upgrading existing DB
+-- ══════════════════════════════════════════════════════════════════
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS frame_price REAL DEFAULT 0;
