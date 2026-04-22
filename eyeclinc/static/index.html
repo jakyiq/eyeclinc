@@ -678,7 +678,7 @@ thead th.th-num{text-align:right;}
 
   /* ── Clinic header ── */
   .ph{text-align:center;margin-bottom:16px;padding-bottom:12px;border-bottom:2.5px solid #1a4a6e;}
-  .ph-logo{max-width:163px;max-height:100px;margin:0 auto 7px;display:block;}
+  .ph-logo{max-width:200px;max-height:120px;margin:0 auto 8px;display:block;}
   .ph-doctor{font-size:14px;font-weight:700;color:#000000;margin-bottom:2px;}
   .ph-phone{font-size:11.5px;color:#333333;margin-top:3px;}
   .ph-loc{font-size:11px;color:#444444;margin-top:2px;}
@@ -2805,41 +2805,70 @@ document.addEventListener('click',function(e){
   if(back){lensStepBack(back);}
 });
 
+// Returns signed CYL from the prescription form (od-cyl or os-cyl)
+function _getCylVal(n){
+  var fid=n===1?'od-cyl':'os-cyl';
+  var v=parseFloat(document.getElementById(fid)?document.getElementById(fid).value:0);
+  if(isNaN(v)||v===0) return null;
+  return (signState[fid]==='-'?-1:1)*Math.abs(v);
+}
+
 function filterLensByStep(n){
   var st=lensStep[n];
   var pool=lns.filter(function(l){return l.stock>0;});
+
+  // 1. Filter by RX type / category
   if(st.rxtype){
     var rt=st.rxtype;
     var byRx=pool.filter(function(l){
       var cat=(l.category||'').toLowerCase();
-      if(rt==='sphere') return cat==='sphere'||cat==='sph';
-      if(rt==='cylinder') return cat==='cylinder'||cat==='cyl'||cat==='sphcyl';
+      if(rt==='sphere')     return cat==='sphere'||cat==='sph';
+      if(rt==='cylinder')   return cat==='cylinder'||cat==='cyl'||cat==='sphcyl';
+      if(rt==='bifocal')    return cat==='bifocal';
+      if(rt==='progressive')return cat==='progressive';
+      if(rt==='reading')    return cat==='reading';
       return cat===rt;
     });
     if(byRx.length) pool=byRx;
   }
+
+  // 2. Filter by material (exact)
   if(st.material){
     var mt=st.material;
     var byMat=pool.filter(function(l){
       var mat=(l.material||'').toLowerCase();
       if(mt==='plastic') return mat==='plastic'||mat==='cr39'||mat===''||!mat;
-      if(mt==='glass') return mat==='glass';
-      return true;
+      if(mt==='glass')   return mat==='glass';
+      return (mat===mt);
     });
     if(byMat.length) pool=byMat;
   }
+
+  // 3. Filter by filter/coating (exact)
   if(st.filter){
     var byF=pool.filter(function(l){return (l.filter_type||'white')===st.filter;});
     if(byF.length) pool=byF;
   }
+
+  // 4. Filter by exact SPH degree from prescription
   var fid=n===1?'od-sph':'os-sph';
   var sph=getSignedVal(fid);
   if(sph!==null){
-    var bySph=pool.filter(function(l){return Math.abs(parseFloat(l.sph||0)-sph)<=0.25;});
-    if(bySph.length) return {pool:bySph,sphMatch:true};
-    return {pool:pool,sphMatch:false};
+    // Exact match (within floating-point rounding: ±0.01)
+    var exactSph=pool.filter(function(l){return Math.abs(parseFloat(l.sph||0)-sph)<0.01;});
+    // Also match CYL if entered
+    var cyl=_getCylVal(n);
+    if(exactSph.length && cyl!==null){
+      var exactBoth=exactSph.filter(function(l){return Math.abs(parseFloat(l.cyl||0)-cyl)<0.01;});
+      if(exactBoth.length) return {pool:exactBoth, sphMatch:true, cylMatch:true};
+      // CYL present but no exact match — return SPH matches with cylMatch:false
+      return {pool:exactSph, sphMatch:true, cylMatch:false};
+    }
+    if(exactSph.length) return {pool:exactSph, sphMatch:true, cylMatch:true};
+    // No exact SPH — show nothing (tell user nothing matches)
+    return {pool:[], sphMatch:false, cylMatch:true};
   }
-  return {pool:pool,sphMatch:true};
+  return {pool:pool, sphMatch:true, cylMatch:true};
 }
 
 function _lsBtn(label,n,to){
@@ -2929,29 +2958,78 @@ function updateLensPicker(n){
     el.innerHTML=html;return;
   }
 
-  // STEP 4 — Results
-  var res4=filterLensByStep(n);var pool4=res4.pool;var sphMatch=res4.sphMatch;
+  // STEP 4 — Results (exact match)
+  var res4=filterLensByStep(n);
+  var pool4=res4.pool;
+  var sphMatch=res4.sphMatch;
+  var cylMatch=res4.cylMatch;
+
+  var fid4=n===1?'od-sph':'os-sph';
+  var sph4=getSignedVal(fid4);
+  var cyl4=_getCylVal(n);
+  var sphStr4=sph4!==null?((sph4>=0?'+':'')+sph4.toFixed(2)):'—';
+  var cylStr4=cyl4!==null?((cyl4>=0?'+':'')+cyl4.toFixed(2)):'—';
+
   var html='';
-  if(!sphMatch) html+='<div style="padding:6px 10px;font-size:12px;color:var(--amb);background:var(--amb-s)">⚠ لا يوجد تطابق دقيق للـ SPH — أقرب المتاح:</div>';
+
+  // Show what we're looking for
+  html+='<div style="padding:6px 10px;font-size:11px;background:var(--acc-s);border-bottom:1px solid var(--bdr)">';
+  html+='<span style="color:var(--acc);font-weight:700">🔍 البحث عن:</span> ';
+  html+='<span style="font-family:var(--mono);font-weight:700">SPH '+sphStr4;
+  if(cyl4!==null) html+=' · CYL '+cylStr4;
+  html+='</span></div>';
+
+  if(!sphMatch){
+    // No SPH entered or no match
+    html+='<div style="padding:14px 12px;text-align:center">';
+    html+='<div style="font-size:22px;margin-bottom:6px">😕</div>';
+    html+='<div style="font-size:13px;font-weight:700;color:var(--red)">لا توجد عدسات بهذا الإعداد (SPH '+sphStr4+')</div>';
+    html+='<div style="font-size:12px;color:var(--txt3);margin-top:4px">تحقق من المخزون أو أضف عدسات مناسبة</div>';
+    html+='</div>';
+    html+=_lsHdr('↩ تعديل الخيارات',n,'filter');
+    el.innerHTML=html;return;
+  }
+
+  if(!cylMatch){
+    html+='<div style="padding:8px 12px;font-size:12px;color:var(--amb);background:var(--amb-s)">⚠ لا يوجد تطابق دقيق لـ CYL '+cylStr4+' — عرض عدسات تطابق SPH '+sphStr4+' فقط</div>';
+  }
+
   html+=_lsHdr('④ اختر العدسة ('+pool4.length+')',n,'filter');
-  if(!pool4.length){el.innerHTML=html+'<div style="padding:10px;font-size:13px;color:var(--txt3)">لا توجد عدسات مطابقة.</div>';return;}
+
+  if(!pool4.length){
+    html+='<div style="padding:14px 12px;text-align:center">';
+    html+='<div style="font-size:22px;margin-bottom:6px">📦</div>';
+    html+='<div style="font-size:13px;font-weight:700;color:var(--red)">لا توجد عدسات مطابقة في المخزون</div>';
+    html+='<div style="font-size:12px;color:var(--txt3);margin-top:4px">جرب تغيير المادة أو الفلتر من الخطوات السابقة</div>';
+    html+='</div>';
+    el.innerHTML=html;return;
+  }
+
   pool4.forEach(function(l){
     var isSel=(n===1?sel1:sel2)===l.id;
-    var sphNum=parseFloat(l.sph||0);var cylNum=parseFloat(l.cyl||0);
-    var sphStr=(sphNum>=0?'+':'')+sphNum.toFixed(2);
-    var cylStr=(cylNum>=0?'+':'')+cylNum.toFixed(2);
+    var lSph=parseFloat(l.sph||0); var lCyl=parseFloat(l.cyl||0);
+    var lSphStr=(lSph>=0?'+':'')+lSph.toFixed(2);
+    var lCylStr=(lCyl>=0?'+':'')+lCyl.toFixed(2);
     var fc=l.filter_type||'white';
-    var bg=_filterBg(fc);var tx=_filterTxt(fc);
-    var stockColor=l.stock<=3?'var(--red)':l.stock<=5?'var(--amb)':'var(--txt2)';
+    var bg=_filterBg(fc); var tx=_filterTxt(fc);
+    var stockColor=l.stock<=3?'var(--red)':l.stock<=5?'var(--amb)':'var(--grn)';
     html+='<div class="lens-row'+(isSel?' selected':'')+'" onclick="selectLens('+n+','+l.id+','+(l.cost||0)+','+(l.price||0)+')" style="cursor:pointer">'+
-          '<span style="display:flex;align-items:center;gap:7px;font-family:var(--mono)">'+
-          '<span style="font-weight:700;font-size:13.5px">SPH '+sphStr+'</span>'+
-          (cylNum!==0?'<span style="color:var(--txt2);font-size:13px">CYL '+cylStr+'</span>':'')+
-          '<span style="background:'+bg+';color:'+tx+';padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">'+filterLabel(fc)+'</span>'+
-          (l.lens_type?'<span style="color:var(--txt3);font-size:12px">'+l.lens_type+'</span>':'')+
-          '</span>'+
-          '<span style="font-size:12px;color:var(--txt3);white-space:nowrap">مخزون: <b style="color:'+stockColor+'">'+l.stock+'</b></span>'+
-          '</div>';
+      '<div style="flex:1">'+
+        '<div style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-weight:700;font-size:14px">'+
+          '<span>SPH '+lSphStr+'</span>'+
+          (lCyl!==0?'<span style="color:var(--txt2)">CYL '+lCylStr+'</span>':'')+
+        '</div>'+
+        '<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">'+
+          '<span style="background:'+bg+';color:'+tx+';padding:1px 8px;border-radius:8px;font-size:11px;font-weight:700">'+filterLabel(fc)+'</span>'+
+          (l.material?'<span style="font-size:11px;color:var(--txt3)">'+l.material+'</span>':'')+
+          (l.lens_type?'<span style="font-size:11px;color:var(--txt3)">'+l.lens_type+'</span>':'')+
+        '</div>'+
+      '</div>'+
+      '<div style="text-align:left;min-width:70px">'+
+        '<div style="font-size:12px;color:var(--txt3)">مخزون: <b style="color:'+stockColor+'">'+l.stock+'</b></div>'+
+        (l.price?'<div style="font-size:11px;color:var(--acc);font-weight:700">'+IQD(l.price)+'</div>':'')+
+      '</div>'+
+    '</div>';
   });
   el.innerHTML=html;
 }
