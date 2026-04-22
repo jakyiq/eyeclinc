@@ -163,7 +163,6 @@ def save_patient():
             try:
                 db.table("patients").update(vals).eq("id", pid).execute()
             except Exception as upd_err:
-                # PGRST204: column doesn't exist in schema cache — remove newer cols and retry
                 _ue = str(upd_err)
                 if any(x in _ue for x in ("PGRST", "does not exist", "column", "frame_price", "schema cache")):
                     safe = {k: v for k, v in vals.items()
@@ -175,6 +174,41 @@ def save_patient():
             if old_l2 and old_l2 != new_l2: _lens_adjust(db, old_l2, +1)
             if new_l1 and new_l1 != old_l1: _lens_adjust(db, new_l1, -1)
             if new_l2 and lqty == 2 and new_l2 != old_l2: _lens_adjust(db, new_l2, -1)
+            # Keep ledger income entry in sync with edited values
+            try:
+                db.table("ledger").update({
+                    "date": vals["admission_date"],
+                    "description": f"بيع للمريض: {vals['name']}",
+                    "total_amount": vals["total_cost"],
+                    "paid_amount": vals["amount_paid"],
+                }).eq("source_ref", f"patient:{pid}").eq("is_expense", False).execute()
+            except Exception:
+                pass
+            # Keep ledger frame-cost expense entry in sync
+            frame_cost = vals["frame_cost"]
+            try:
+                existing_fc = db.table("ledger").select("id") \
+                    .eq("source_ref", f"patient_frame:{pid}").execute()
+                if frame_cost > 0:
+                    if existing_fc.data:
+                        db.table("ledger").update({
+                            "date": vals["admission_date"],
+                            "total_amount": frame_cost, "paid_amount": frame_cost,
+                        }).eq("source_ref", f"patient_frame:{pid}").execute()
+                    else:
+                        db.table("ledger").insert({
+                            "date": vals["admission_date"], "entry_type": "expense",
+                            "category": "تكلفة إطار",
+                            "description": f"تكلفة إطار: {vals['frame_name'] or vals['name']}",
+                            "total_amount": frame_cost, "paid_amount": frame_cost,
+                            "is_expense": True, "source_ref": f"patient_frame:{pid}",
+                        }).execute()
+                else:
+                    if existing_fc.data:
+                        db.table("ledger").delete() \
+                            .eq("source_ref", f"patient_frame:{pid}").execute()
+            except Exception:
+                pass
         else:
             try:
                 res = db.table("patients").insert(vals).execute()
@@ -192,6 +226,7 @@ def save_patient():
             pid = row["id"]
             if new_l1: _lens_adjust(db, new_l1, -1)
             if new_l2 and lqty == 2: _lens_adjust(db, new_l2, -1)
+            # Ledger: income entry for the sale
             if vals["total_cost"] > 0:
                 db.table("ledger").insert({
                     "date": vals["admission_date"], "entry_type": "income",
@@ -199,6 +234,15 @@ def save_patient():
                     "description": f"بيع للمريض: {vals['name']}",
                     "total_amount": vals["total_cost"], "paid_amount": vals["amount_paid"],
                     "is_expense": False, "source_ref": f"patient:{pid}",
+                }).execute()
+            # Ledger: expense entry for frame purchase cost
+            if vals["frame_cost"] > 0:
+                db.table("ledger").insert({
+                    "date": vals["admission_date"], "entry_type": "expense",
+                    "category": "تكلفة إطار",
+                    "description": f"تكلفة إطار: {vals['frame_name'] or vals['name']}",
+                    "total_amount": vals["frame_cost"], "paid_amount": vals["frame_cost"],
+                    "is_expense": True, "source_ref": f"patient_frame:{pid}",
                 }).execute()
 
         return jsonify({"id": pid})
@@ -230,7 +274,8 @@ def delete_patient(pid):
                 _lens_adjust(db, row["lens2_id"], +1)
             # Remove from ledger — delete any ledger entries referencing this patient
             try:
-                db.table("ledger").delete().eq("source_ref", str(pid)).execute()
+                db.table("ledger").delete().eq("source_ref", f"patient:{pid}").execute()
+                db.table("ledger").delete().eq("source_ref", f"patient_frame:{pid}").execute()
             except Exception:
                 pass
         db.table("patients").delete().eq("id", pid).execute()
