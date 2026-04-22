@@ -160,13 +160,32 @@ def save_patient():
                            .eq("id", pid).execute())
             old_l1 = _int(old.get("lens1_id")) if old else None
             old_l2 = _int(old.get("lens2_id")) if old else None
-            db.table("patients").update(vals).eq("id", pid).execute()
+            try:
+                db.table("patients").update(vals).eq("id", pid).execute()
+            except Exception as upd_err:
+                # PGRST204: column doesn't exist in schema cache — remove newer cols and retry
+                _ue = str(upd_err)
+                if any(x in _ue for x in ("PGRST", "does not exist", "column", "frame_price", "schema cache")):
+                    safe = {k: v for k, v in vals.items()
+                            if k not in ("frame_price","frame_cost","frame_name","frame_type","material","features","rxtype")}
+                    db.table("patients").update(safe).eq("id", pid).execute()
+                else:
+                    raise
             if old_l1 and old_l1 != new_l1: _lens_adjust(db, old_l1, +1)
             if old_l2 and old_l2 != new_l2: _lens_adjust(db, old_l2, +1)
             if new_l1 and new_l1 != old_l1: _lens_adjust(db, new_l1, -1)
             if new_l2 and lqty == 2 and new_l2 != old_l2: _lens_adjust(db, new_l2, -1)
         else:
-            res = db.table("patients").insert(vals).execute()
+            try:
+                res = db.table("patients").insert(vals).execute()
+            except Exception as ins_err:
+                _ie = str(ins_err)
+                if any(x in _ie for x in ("PGRST", "does not exist", "column", "frame_price", "schema cache")):
+                    safe = {k: v for k, v in vals.items()
+                            if k not in ("frame_price","frame_cost","frame_name","frame_type","material","features","rxtype")}
+                    res = db.table("patients").insert(safe).execute()
+                else:
+                    raise
             row = sb_one(res)
             if not row:
                 return jsonify({"error": "Insert returned no data — check Supabase RLS policies"}), 400
@@ -202,12 +221,18 @@ def _lens_adjust(db, lid, delta):
 def delete_patient(pid):
     try:
         db  = get_db()
-        row = sb_one(db.table("patients").select("lens1_id,lens2_id,lenses_qty")
-                       .eq("id", pid).execute())
+        row = sb_one(db.table("patients").select("*").eq("id", pid).execute())
         if row:
-            if row.get("lens1_id"): _lens_adjust(db, row["lens1_id"], +1)
+            # Restore lens stock
+            if row.get("lens1_id"):
+                _lens_adjust(db, row["lens1_id"], +1)
             if row.get("lens2_id") and (_int(row.get("lenses_qty"), 2) or 2) == 2:
                 _lens_adjust(db, row["lens2_id"], +1)
+            # Remove from ledger — delete any ledger entries referencing this patient
+            try:
+                db.table("ledger").delete().eq("source_ref", str(pid)).execute()
+            except Exception:
+                pass
         db.table("patients").delete().eq("id", pid).execute()
         return jsonify({"ok": True})
     except Exception as e:
@@ -858,12 +883,13 @@ def export_excel():
         ws3 = wb.create_sheet("المبيعات المتنوعة")
         hdrs3 = ["التاريخ","المنتج","الفئة","الكمية","سعر الوحدة","الإجمالي"]
         style_header(ws3, hdrs3)
-        csales = sb_rows(db.table("custom_sales").select("*").order("date", desc=True).execute())
+        csales = sb_rows(db.table("custom_sales").select("*").order("created_at", desc=True).execute())
         for i, s in enumerate(csales, 2):
             qty   = _int(s.get("qty"),1)
-            price = _float(s.get("price"))
+            price = _float(s.get("unit_price") or s.get("price") or s.get("total"))
             row = [
-                fmt_date(s.get("date")), str(s.get("product","")),
+                fmt_date(s.get("date") or s.get("created_at","")),
+                str(s.get("item_name") or s.get("product","")),
                 str(s.get("category","")), qty, price, round(qty*price)
             ]
             ws3.append(row)
@@ -874,10 +900,10 @@ def export_excel():
         ws4 = wb.create_sheet("التكاليف التشغيلية")
         hdrs4 = ["التاريخ","البند","الفئة","المبلغ","ملاحظات"]
         style_header(ws4, hdrs4)
-        opcosts = sb_rows(db.table("op_costs").select("*").order("date", desc=True).execute())
+        opcosts = sb_rows(db.table("op_costs").select("*").order("created_at", desc=True).execute())
         for i, o in enumerate(opcosts, 2):
             row = [
-                fmt_date(o.get("date")), str(o.get("description","")),
+                fmt_date(o.get("date") or o.get("created_at","")), str(o.get("name") or o.get("description","")),
                 str(o.get("category","")), _float(o.get("amount")), str(o.get("notes",""))
             ]
             ws4.append(row)
