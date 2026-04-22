@@ -2763,7 +2763,6 @@ function toggleChkDone(btn){chkDone=!chkDone;btn.className='toggle'+(chkDone?' o
 function toggleChkPaid(btn){chkPaid=!chkPaid;btn.className='toggle'+(chkPaid?' on':'');document.getElementById('chk-paid-lbl').textContent=chkPaid?'نعم':'لا';}
 
 // ── LENS PICKER ──
-// ── Shared filter label lookup ────────────────────────────────────
 const FILTER_LABELS={
   white:'Clear / White', bluecut:'Blue Light Cut', bluecut_green:'Blue Light Cut + Green',
   photochromic:'Photochromic', photo_blue:'Photo + Blue Cut', photo_green:'Photo + Green',
@@ -2779,149 +2778,182 @@ function resetLensStep(n){
   updateLensPicker(n);
 }
 
-function lensStepSelect(n,field,val){
+// Called from data-ls-* click delegation (avoids inline quote nesting)
+function lensStepPick(el){
+  var n=+el.dataset.lsN;
+  var field=el.dataset.lsField;
+  var val=el.dataset.lsVal;
   lensStep[n][field]=val;
-  // advance step
   if(field==='rxtype') lensStep[n].step='material';
   else if(field==='material') lensStep[n].step='filter';
   else if(field==='filter') lensStep[n].step='results';
   updateLensPicker(n);
 }
 
+function lensStepBack(el){
+  var n=+el.dataset.lsN;
+  var to=el.dataset.lsTo;
+  lensStep[n].step=to;
+  updateLensPicker(n);
+}
+
+// Attach delegated listeners once DOM is ready
+document.addEventListener('click',function(e){
+  var pick=e.target.closest('[data-ls-field]');
+  if(pick){lensStepPick(pick);return;}
+  var back=e.target.closest('[data-ls-to]');
+  if(back){lensStepBack(back);}
+});
+
 function filterLensByStep(n){
-  const st=lensStep[n];
-  let pool=lns.filter(l=>l.stock>0);
-  // Match rx type (category) if selected
+  var st=lensStep[n];
+  var pool=lns.filter(function(l){return l.stock>0;});
   if(st.rxtype){
-    const rt=st.rxtype;
-    const byRx=pool.filter(l=>{
-      const cat=(l.category||'').toLowerCase();
+    var rt=st.rxtype;
+    var byRx=pool.filter(function(l){
+      var cat=(l.category||'').toLowerCase();
       if(rt==='sphere') return cat==='sphere'||cat==='sph';
       if(rt==='cylinder') return cat==='cylinder'||cat==='cyl'||cat==='sphcyl';
-      if(rt==='bifocal') return cat==='bifocal';
-      if(rt==='progressive') return cat==='progressive';
-      if(rt==='reading') return cat==='reading';
-      return true;
+      return cat===rt;
     });
     if(byRx.length) pool=byRx;
   }
-  // Match material
   if(st.material){
-    const mt=st.material;
-    const byMat=pool.filter(l=>{
-      const mat=(l.material||'').toLowerCase();
+    var mt=st.material;
+    var byMat=pool.filter(function(l){
+      var mat=(l.material||'').toLowerCase();
       if(mt==='plastic') return mat==='plastic'||mat==='cr39'||mat===''||!mat;
       if(mt==='glass') return mat==='glass';
       return true;
     });
     if(byMat.length) pool=byMat;
   }
-  // Match filter
   if(st.filter){
-    const byF=pool.filter(l=>(l.filter_type||'white')===st.filter);
+    var byF=pool.filter(function(l){return (l.filter_type||'white')===st.filter;});
     if(byF.length) pool=byF;
   }
-  // Also try to match SPH from prescription
-  const fid=n===1?'od-sph':'os-sph';
-  const sph=getSignedVal(fid);
+  var fid=n===1?'od-sph':'os-sph';
+  var sph=getSignedVal(fid);
   if(sph!==null){
-    const bySph=pool.filter(l=>Math.abs(parseFloat(l.sph||0)-sph)<=0.25);
-    if(bySph.length) return {pool:bySph, sphMatch:true};
-    return {pool, sphMatch:false};
+    var bySph=pool.filter(function(l){return Math.abs(parseFloat(l.sph||0)-sph)<=0.25;});
+    if(bySph.length) return {pool:bySph,sphMatch:true};
+    return {pool:pool,sphMatch:false};
   }
-  return {pool, sphMatch:true};
+  return {pool:pool,sphMatch:true};
+}
+
+function _lsBtn(label,n,to){
+  return '<button data-ls-n="'+n+'" data-ls-to="'+to+'" style="font-size:10px;padding:2px 8px;border:1px solid var(--bdr);border-radius:4px;background:var(--bg);color:var(--txt3);cursor:pointer">'+label+'</button>';
+}
+function _lsHdr(title,n,to){
+  var back=to?_lsBtn('↩ رجوع',n,to):'';
+  return '<div style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--txt3);display:flex;justify-content:space-between;align-items:center"><span>'+title+'</span>'+back+'</div>';
+}
+function _filterBg(f){
+  if(f.startsWith('photo')) return '#eefaf4';
+  if(f.includes('blue')||f==='bluecut') return '#eef0fa';
+  if(f==='polarized') return '#f4eefa';
+  if(f==='white') return '#f0f0f0';
+  return '#fff8ee';
+}
+function _filterTxt(f){
+  if(f.startsWith('photo')) return '#1a6e4a';
+  if(f.includes('blue')||f==='bluecut') return '#1a2a8e';
+  if(f==='polarized') return '#4a1a6e';
+  if(f==='white') return '#555';
+  return '#7a5010';
 }
 
 function updateLensPicker(n){
-  const listId=n===1?'lens1-list':'lens2-list';
-  const el=document.getElementById(listId);
+  var listId=n===1?'lens1-list':'lens2-list';
+  var el=document.getElementById(listId);
+  if(!el) return;
   if(!lns.length){el.innerHTML='<div style="padding:10px;font-size:13px;color:var(--txt3);text-align:center">أضف عدسات في المخزون أولاً</div>';return;}
-  const st=lensStep[n];
+  var st=lensStep[n];
 
-  // STEP 1: Choose RX type
+  // STEP 1 — RX type
   if(st.step==='rxtype'){
-    const rxTypes=[
-      {val:'sphere',label:'🔵 كروي (Sphere)',ar:'كروي'},
-      {val:'cylinder',label:'⭕ لاكروي (Cylinder)',ar:'اسطواني'},
-      {val:'bifocal',label:'👓 ثنائي البؤر (Bifocal)',ar:'ثنائي'},
-      {val:'progressive',label:'🌀 متعدد البؤر (Progressive)',ar:'تدريجي'},
-      {val:'reading',label:'📖 للقراءة (Reading)',ar:'قراءة'},
+    var chip=selectedChips&&selectedChips.rxtype;
+    if(chip&&!st.rxtype){lensStep[n].rxtype=chip;lensStep[n].step='material';updateLensPicker(n);return;}
+    var rxTypes=[
+      {val:'sphere',   label:'🔵 كروي (Sphere)'},
+      {val:'cylinder', label:'⭕ لاكروي (Cylinder)'},
+      {val:'bifocal',  label:'👓 ثنائي البؤر (Bifocal)'},
+      {val:'progressive',label:'🌀 متعدد البؤر (Progressive)'},
+      {val:'reading',  label:'📖 للقراءة (Reading)'}
     ];
-    // only show types present in stock
-    const inStock=new Set(lns.filter(l=>l.stock>0).map(l=>(l.category||'').toLowerCase()));
-    const available=rxTypes.filter(r=>{
-      if(r.val==='sphere') return inStock.has('sphere')||inStock.has('sph');
-      if(r.val==='cylinder') return inStock.has('cylinder')||inStock.has('cyl')||inStock.has('sphcyl');
-      return inStock.has(r.val)||lns.filter(l=>l.stock>0).length>0;
+    var html=_lsHdr('① اختر نوع الوصفة',n,'');
+    rxTypes.forEach(function(r){
+      var cnt=lns.filter(function(l){
+        if(!l.stock) return false;
+        var cat=(l.category||'').toLowerCase();
+        if(r.val==='sphere') return cat==='sphere'||cat==='sph';
+        if(r.val==='cylinder') return cat==='cylinder'||cat==='cyl'||cat==='sphcyl';
+        return cat===r.val;
+      }).length;
+      if(!cnt) return;
+      html+='<div class="lens-row" data-ls-n="'+n+'" data-ls-field="rxtype" data-ls-val="'+r.val+'" style="cursor:pointer">'+
+            '<span style="font-size:13px">'+r.label+'</span>'+
+            '<span style="font-size:11px;color:var(--txt3)">'+cnt+' عدسة</span></div>';
     });
-    // also default to selected rx chip if set
-    const chip=selectedChips&&selectedChips.rxtype;
-    if(chip&&!st.rxtype){
-      // auto-advance if chip is set
-      lensStep[n].rxtype=chip;lensStep[n].step='material';
-      updateLensPicker(n);return;
-    }
-    el.innerHTML='<div style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--txt3);letter-spacing:.05em;text-transform:uppercase">① اختر نوع الوصفة</div>'+
-      available.map(r=>`<div class="lens-row" onclick="lensStepSelect(${n},'rxtype','${r.val}')" style="cursor:pointer">
-        <span style="font-size:13px">${r.label}</span>
-        <span style="font-size:11px;color:var(--txt3)">${lns.filter(l=>l.stock>0&&((r.val==='sphere'&&(l.category||'').toLowerCase().includes('sph'))||(r.val==='cylinder'&&((l.category||'').toLowerCase().includes('cyl')||(l.category||'').toLowerCase().includes('sphcyl')))||((l.category||'').toLowerCase()===r.val)).length} عدسة</span>
-      </div>`).join('');
-    return;
+    el.innerHTML=html;return;
   }
 
-  // STEP 2: Choose material
+  // STEP 2 — Material
   if(st.step==='material'){
-    const {pool}=filterLensByStep(n);
-    const mats=[...new Set(pool.map(l=>l.material||'plastic'))];
-    const matLabels={plastic:'🔵 بلاستيك (Plastic)',glass:'⚪ زجاج (Glass)',contact:'Contact'};
-    el.innerHTML='<div style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--txt3);letter-spacing:.05em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center"><span>② اختر المادة</span><button onclick="resetLensStep('+n+')" style="font-size:10px;padding:1px 7px;border:1px solid var(--bdr);border-radius:4px;background:var(--bg);color:var(--txt3);cursor:pointer">↩ رجوع</button></div>'+
-      mats.map(m=>`<div class="lens-row" onclick="lensStepSelect(${n},'material','${m}')" style="cursor:pointer">
-        <span style="font-size:13px">${matLabels[m]||m||'بلاستيك'}</span>
-        <span style="font-size:11px;color:var(--txt3)">${pool.filter(l=>(l.material||'plastic')===m).length} عدسة</span>
-      </div>`).join('');
-    return;
+    var res2=filterLensByStep(n);var pool2=res2.pool;
+    var mats=[...new Set(pool2.map(function(l){return l.material||'plastic';}))];
+    var matLbls={plastic:'🔵 بلاستيك (Plastic)',glass:'⚪ زجاج (Glass)',contact:'Contact Lens'};
+    var html=_lsHdr('② اختر المادة',n,'rxtype');
+    mats.forEach(function(m){
+      var cnt=pool2.filter(function(l){return (l.material||'plastic')===m;}).length;
+      html+='<div class="lens-row" data-ls-n="'+n+'" data-ls-field="material" data-ls-val="'+m+'" style="cursor:pointer">'+
+            '<span style="font-size:13px">'+(matLbls[m]||m)+'</span>'+
+            '<span style="font-size:11px;color:var(--txt3)">'+cnt+' عدسة</span></div>';
+    });
+    el.innerHTML=html;return;
   }
 
-  // STEP 3: Choose filter/coating
+  // STEP 3 — Filter/coating
   if(st.step==='filter'){
-    const {pool}=filterLensByStep(n);
-    const filters=[...new Set(pool.map(l=>l.filter_type||'white'))];
-    el.innerHTML='<div style="padding:6px 10px;font-size:11px;font-weight:700;color:var(--txt3);letter-spacing:.05em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center"><span>③ اختر الفلتر / الطلاء</span><button onclick="lensStep['+n+'].step='material';updateLensPicker('+n+')" style="font-size:10px;padding:1px 7px;border:1px solid var(--bdr);border-radius:4px;background:var(--bg);color:var(--txt3);cursor:pointer">↩ رجوع</button></div>'+
-      filters.map(f=>{
-        const _fbg=f.startsWith('photo')?'#eefaf4':(f.includes('blue')||f==='bluecut')?'#eef0fa':f==='polarized'?'#f4eefa':f==='white'?'#f0f0f0':'#fff8ee';
-        const _ftxt=f.startsWith('photo')?'#1a6e4a':(f.includes('blue')||f==='bluecut')?'#1a2a8e':f==='polarized'?'#4a1a6e':f==='white'?'#555':'#7a5010';
-        return `<div class="lens-row" onclick="lensStepSelect(${n},'filter','${f}')" style="cursor:pointer">
-          <span style="display:flex;align-items:center;gap:8px"><span style="background:${_fbg};color:${_ftxt};padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700">${filterLabel(f)}</span></span>
-          <span style="font-size:11px;color:var(--txt3)">${pool.filter(l=>(l.filter_type||'white')===f).length} عدسة</span>
-        </div>`;
-      }).join('');
-    return;
+    var res3=filterLensByStep(n);var pool3=res3.pool;
+    var filters=[...new Set(pool3.map(function(l){return l.filter_type||'white';}))];
+    var html=_lsHdr('③ اختر الفلتر',n,'material');
+    filters.forEach(function(f){
+      var cnt=pool3.filter(function(l){return (l.filter_type||'white')===f;}).length;
+      var bg=_filterBg(f);var tx=_filterTxt(f);
+      html+='<div class="lens-row" data-ls-n="'+n+'" data-ls-field="filter" data-ls-val="'+f+'" style="cursor:pointer">'+
+            '<span style="background:'+bg+';color:'+tx+';padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700">'+filterLabel(f)+'</span>'+
+            '<span style="font-size:11px;color:var(--txt3)">'+cnt+' عدسة</span></div>';
+    });
+    el.innerHTML=html;return;
   }
 
-  // STEP 4: Results
-  const {pool,sphMatch}=filterLensByStep(n);
-  const warn=!sphMatch?`<div style="padding:6px 10px;font-size:12px;color:var(--amb);background:var(--amb-s);border-bottom:1px solid var(--bdr)">⚠ لا يوجد تطابق دقيق لـ SPH المدخل. أقرب المتاح:</div>`:'';
-  const resetBtn=`<div style="padding:4px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:var(--txt3);font-weight:700">④ اختر العدسة (${pool.length})</span><button onclick="resetLensStep(${n})" style="font-size:10px;padding:1px 7px;border:1px solid var(--bdr);border-radius:4px;background:var(--bg);color:var(--txt3);cursor:pointer">↩ ابدأ من جديد</button></div>`;
-  if(!pool.length){el.innerHTML=resetBtn+'<div style="padding:10px;font-size:13px;color:var(--txt3)">لا توجد عدسات مطابقة.</div>';return;}
-  el.innerHTML=warn+resetBtn+pool.map(l=>{
-    const currentSel=n===1?sel1:sel2;const isSel=currentSel===l.id;
-    const fLabel=filterLabel(l.filter_type);
-    const _fc=l.filter_type||'white';
-    const _fbg=_fc.startsWith('photo')?'#eefaf4':(_fc.includes('blue')||_fc==='bluecut')?'#eef0fa':_fc==='polarized'?'#f4eefa':_fc==='white'?'#f0f0f0':'#fff8ee';
-    const _ftxt=_fc.startsWith('photo')?'#1a6e4a':(_fc.includes('blue')||_fc==='bluecut')?'#1a2a8e':_fc==='polarized'?'#4a1a6e':_fc==='white'?'#555':'#7a5010';
-    const sphNum=parseFloat(l.sph||0);const cylNum=parseFloat(l.cyl||0);
-    const sphStr=(sphNum>=0?'+':'')+sphNum.toFixed(2);
-    const cylStr=(cylNum>=0?'+':'')+cylNum.toFixed(2);
-    return `<div class="lens-row${isSel?' selected':''}" onclick="selectLens(${n},${l.id},${l.cost||0},${l.price||0})">
-      <span style="display:flex;align-items:center;gap:7px;font-family:var(--mono)">
-        <span style="font-weight:700;font-size:13.5px">SPH ${sphStr}</span>
-        ${cylNum!==0?`<span style="color:var(--txt2);font-size:13px">CYL ${cylStr}</span>`:''}
-        <span style="background:${_fbg};color:${_ftxt};padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;font-family:var(--font)">${fLabel}</span>
-        ${l.lens_type?`<span style="color:var(--txt3);font-size:12px;font-family:var(--font)">${l.lens_type}</span>`:''}
-      </span>
-      <span style="color:var(--txt3);font-size:12px;font-family:var(--font);white-space:nowrap">مخزون: <b style="color:${l.stock<=3?'var(--red)':l.stock<=5?'var(--amb)':'var(--txt2)'}">${l.stock}</b></span>
-    </div>`;
-  }).join('');
+  // STEP 4 — Results
+  var res4=filterLensByStep(n);var pool4=res4.pool;var sphMatch=res4.sphMatch;
+  var html='';
+  if(!sphMatch) html+='<div style="padding:6px 10px;font-size:12px;color:var(--amb);background:var(--amb-s)">⚠ لا يوجد تطابق دقيق للـ SPH — أقرب المتاح:</div>';
+  html+=_lsHdr('④ اختر العدسة ('+pool4.length+')',n,'filter');
+  if(!pool4.length){el.innerHTML=html+'<div style="padding:10px;font-size:13px;color:var(--txt3)">لا توجد عدسات مطابقة.</div>';return;}
+  pool4.forEach(function(l){
+    var isSel=(n===1?sel1:sel2)===l.id;
+    var sphNum=parseFloat(l.sph||0);var cylNum=parseFloat(l.cyl||0);
+    var sphStr=(sphNum>=0?'+':'')+sphNum.toFixed(2);
+    var cylStr=(cylNum>=0?'+':'')+cylNum.toFixed(2);
+    var fc=l.filter_type||'white';
+    var bg=_filterBg(fc);var tx=_filterTxt(fc);
+    var stockColor=l.stock<=3?'var(--red)':l.stock<=5?'var(--amb)':'var(--txt2)';
+    html+='<div class="lens-row'+(isSel?' selected':'')+'" onclick="selectLens('+n+','+l.id+','+(l.cost||0)+','+(l.price||0)+')" style="cursor:pointer">'+
+          '<span style="display:flex;align-items:center;gap:7px;font-family:var(--mono)">'+
+          '<span style="font-weight:700;font-size:13.5px">SPH '+sphStr+'</span>'+
+          (cylNum!==0?'<span style="color:var(--txt2);font-size:13px">CYL '+cylStr+'</span>':'')+
+          '<span style="background:'+bg+';color:'+tx+';padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">'+filterLabel(fc)+'</span>'+
+          (l.lens_type?'<span style="color:var(--txt3);font-size:12px">'+l.lens_type+'</span>':'')+
+          '</span>'+
+          '<span style="font-size:12px;color:var(--txt3);white-space:nowrap">مخزون: <b style="color:'+stockColor+'">'+l.stock+'</b></span>'+
+          '</div>';
+  });
+  el.innerHTML=html;
 }
 function selectLens(n,id,cost,price){
   if(n===1){sel1=id;document.getElementById('p-l1cost').value=cost;document.getElementById('p-l1c').value=price;}
@@ -3922,7 +3954,7 @@ function updateAISuggestions(){
   sugs.forEach(([i,txt])=>{const el=document.getElementById('sug'+i);if(el)el.textContent=txt;});
 }
 // ══════════════════════════════════════════════════════════════════════
-// PIN LOCK — simple & reliable
+// PIN LOCK — bulletproof version
 // ══════════════════════════════════════════════════════════════════════
 const PIN_KEY     = 'alnoor_pin';
 const PIN_SET_KEY = 'alnoor_pin_set';
@@ -3931,15 +3963,27 @@ const SESSION_KEY = 'alnoor_unlocked';
 let _pinBuffer = '';
 let _pinLen    = 4;
 
-function _hash(pin){ return btoa(unescape(encodeURIComponent(pin + 'alnoor2024'))); }
-function _stored(){ return localStorage.getItem(PIN_KEY) || _hash('1234'); }
+// Simple obfuscation — no btoa/unescape issues
+function _hash(pin){
+  try{ return btoa(pin + ':alnoor'); }
+  catch(e){ return pin + ':alnoor'; }
+}
+function _stored(){
+  return localStorage.getItem(PIN_KEY) || _hash('1234');
+}
 function _pinIsSet(){ return !!localStorage.getItem(PIN_SET_KEY); }
 function _unlocked(){ return sessionStorage.getItem(SESSION_KEY) === '1'; }
 
 function initPin(){
+  const ps = document.getElementById('pin-screen');
+  if(!ps) return;
   if(_unlocked()){
-    document.getElementById('pin-screen').classList.add('hidden');
-  } else if(!_pinIsSet()){
+    ps.classList.add('hidden');
+    return;
+  }
+  // Show pin screen
+  ps.classList.remove('hidden','hiding');
+  if(!_pinIsSet()){
     document.getElementById('pin-error').textContent = 'الرمز الافتراضي: 1234';
   }
 }
@@ -3947,25 +3991,28 @@ function initPin(){
 function unlockApp(){
   sessionStorage.setItem(SESSION_KEY,'1');
   const ps = document.getElementById('pin-screen');
+  if(!ps) return;
   ps.classList.add('hiding');
-  setTimeout(()=>ps.classList.add('hidden'), 320);
+  setTimeout(()=>{ ps.classList.add('hidden'); ps.classList.remove('hiding'); }, 350);
 }
 
 function lockApp(){
   sessionStorage.removeItem(SESSION_KEY);
   _pinBuffer = '';
   _renderDots();
-  document.getElementById('pin-error').textContent = _pinIsSet() ? '' : 'الرمز الافتراضي: 1234';
+  const errEl = document.getElementById('pin-error');
+  if(errEl) errEl.textContent = _pinIsSet() ? '' : 'الرمز الافتراضي: 1234';
   const ps = document.getElementById('pin-screen');
-  ps.classList.remove('hiding','hidden');
+  if(ps) ps.classList.remove('hiding','hidden');
 }
 
 function pinKey(k){
   if(_pinBuffer.length >= _pinLen) return;
   _pinBuffer += k;
   _renderDots();
-  document.getElementById('pin-error').textContent = '';
-  if(_pinBuffer.length >= _pinLen) setTimeout(_checkPin, 150);
+  const errEl = document.getElementById('pin-error');
+  if(errEl) errEl.textContent = '';
+  if(_pinBuffer.length >= _pinLen) setTimeout(_checkPin, 180);
 }
 
 function pinDel(){
@@ -3977,17 +4024,20 @@ function pinSubmit(){ _checkPin(); }
 
 function _checkPin(){
   if(!_pinBuffer.length) return;
-  if(_hash(_pinBuffer) === _stored()){
+  const entered = _hash(_pinBuffer);
+  const stored  = _stored();
+  if(entered === stored){
     document.querySelectorAll('.pin-dot').forEach(d=>{
       d.classList.remove('error','filled'); d.classList.add('success');
     });
-    setTimeout(unlockApp, 380);
+    setTimeout(unlockApp, 400);
   } else {
     document.querySelectorAll('.pin-dot').forEach(d=>{
       d.classList.remove('filled','success'); d.classList.add('error');
     });
-    document.getElementById('pin-error').textContent = 'رمز غير صحيح، حاول مجدداً';
-    setTimeout(()=>{ _pinBuffer=''; _renderDots(); }, 700);
+    const errEl = document.getElementById('pin-error');
+    if(errEl) errEl.textContent = 'رمز غير صحيح، حاول مجدداً';
+    setTimeout(()=>{ _pinBuffer=''; _renderDots(); }, 750);
   }
 }
 
@@ -3999,21 +4049,28 @@ function _renderDots(){
 }
 
 function openPinSetup(){
-  ['pin-old','pin-new','pin-confirm'].forEach(id=>document.getElementById(id).value='');
+  ['pin-old','pin-new','pin-confirm'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
   openM('modal-pin-change');
 }
 
 function savePinChange(){
-  const oldVal = document.getElementById('pin-old').value.trim();
-  const newVal = document.getElementById('pin-new').value.trim();
-  const conf   = document.getElementById('pin-confirm').value.trim();
+  const oldEl  = document.getElementById('pin-old');
+  const newEl  = document.getElementById('pin-new');
+  const confEl = document.getElementById('pin-confirm');
+  if(!newEl||!confEl) return;
+  const oldVal = (oldEl?oldEl.value:'').trim();
+  const newVal = newEl.value.trim();
+  const conf   = confEl.value.trim();
   if(_pinIsSet() && _hash(oldVal) !== _stored()){ toast('الرمز الحالي غير صحيح','red'); return; }
   if(!/^\d{4,6}$/.test(newVal)){ toast('يجب أن يكون الرمز 4–6 أرقام','red'); return; }
   if(newVal !== conf){ toast('الرمزان غير متطابقان','red'); return; }
   localStorage.setItem(PIN_KEY, _hash(newVal));
   localStorage.setItem(PIN_SET_KEY, '1');
   _pinLen = newVal.length;
-  document.getElementById('pin-dots').innerHTML =
+  const dotsEl = document.getElementById('pin-dots');
+  if(dotsEl) dotsEl.innerHTML =
     Array.from({length:_pinLen},(_,i)=>`<div class="pin-dot" id="pd${i}"></div>`).join('');
   closeModal('modal-pin-change');
   toast('تم حفظ رمز PIN ✓','green');
@@ -4220,14 +4277,31 @@ document.addEventListener('DOMContentLoaded', async function(){
     buildNotifList();
   };
 
-  await init();          // load all app data
-
-  buildNotifList();      // populate badge after data loads
+  try {
+    await init();          // load all app data
+    buildNotifList();      // populate badge after data loads
+  } catch(e) {
+    console.error('init error:', e);
+    // Don't let a data-load error block the UI
+    toast('خطأ في تحميل البيانات — تحقق من الاتصال', 'red');
+  }
 
   // Sync clinic name to PIN screen
   const cn = document.getElementById('sb-clinic-name');
   const pn = document.getElementById('pin-clinic-name');
   if(cn && pn) pn.textContent = cn.textContent;
+
+  // One-time migration: clear PINs saved with the old hash algorithm.
+  // The new format marker key tells us migration already ran.
+  const MIGRATED_KEY = 'alnoor_pin_v2';
+  if(!localStorage.getItem(MIGRATED_KEY)){
+    localStorage.removeItem(PIN_KEY);
+    localStorage.removeItem(PIN_SET_KEY);
+    localStorage.setItem(MIGRATED_KEY, '1');
+    // Show default PIN hint on lock screen
+    const errEl = document.getElementById('pin-error');
+    if(errEl && !_unlocked()) errEl.textContent = 'الرمز الافتراضي: 1234';
+  }
 });
 </script>
 
