@@ -3082,7 +3082,14 @@ function calcTotal(){
 }
 
 // ── SAVE PATIENT ──
+let _savingPatient = false;
 async function savePatient(){
+  if(_savingPatient)return;
+  _savingPatient=true;
+  const btnSave=document.getElementById('btn-save');
+  const origHtml=btnSave?btnSave.innerHTML:'';
+  if(btnSave){btnSave.disabled=true;btnSave.innerHTML='<span>⏳</span> جارٍ الحفظ...';}
+  try{
   const name=document.getElementById('p-nm').value.trim();
   if(!name){toast('أدخل اسم المريض','red');return;}
   const qty=+document.getElementById('p-lqty').value;
@@ -3127,6 +3134,10 @@ async function savePatient(){
   toast(LANG==='en'?(ePt?'Patient updated!':'Patient saved!'):(ePt?'تم تحديث المريض':'تم حفظ المريض!'),'green');
   await loadLns(); // refresh stock counts after lens deduction
   clearForm();updateBadges();
+  }finally{
+    _savingPatient=false;
+    if(btnSave){btnSave.disabled=false;btnSave.innerHTML=origHtml;}
+  }
 }
 
 function clearForm(){
@@ -3228,7 +3239,7 @@ async function viewPt(id){
   const _vl2price=_vl2?(_vl2.price||0):(p.lens2_cost||0);
   soldHtml+=`<div class="cr"><span>${LANG==='en'?'Lens 2 (OS)':'عدسة 2 (OS)'}: SPH${p.lens2_info.sph} CYL${p.lens2_info.cyl||'0'} (${filterLabel(p.lens2_info.filter_type)})</span><span>${IQD(_vl2price)}</span></div>`;
 }
-  if(p.frame_name)soldHtml+=`<div class="cr"><span>${LANG==='en'?'Frame':'إطار'}: ${p.frame_name} (${p.frame_type||''})</span><span>${IQD(p.frame_price||p.frame_cost||0)}</span></div>`;
+  if(p.frame_name)soldHtml+=`<div class="cr"><span>${LANG==='en'?'Frame':'إطار'}: ${p.frame_name} (${p.frame_type||''})</span><span>${IQD(p.frame_cost||0)}</span></div>`;
   if(p.checkup_done)soldHtml+=`<div class="cr"><span>${LANG==='en'?'Checkup Fee':'رسوم الكشف'} ${p.checkup_paid?'✓':(LANG==='en'?'(unpaid)':'(غير مدفوعة)')}</span><span>${IQD(p.checkup_fee||0)}</span></div>`;
   if(soldHtml)soldHtml+=`<div class="cr-tot"><span>${LANG==='en'?'Total':'الإجمالي'}</span><span>${IQD(p.total_cost||0)}</span></div>`;
   document.getElementById('modal-body').innerHTML=`
@@ -3290,7 +3301,7 @@ function editPatient(id){
   document.getElementById('p-total').value=p.total_cost||0;
   document.getElementById('p-paid').value=p.amount_paid||0;
   document.getElementById('p-rem').value=Math.max(0,(p.total_cost||0)-(p.amount_paid||0));
-  document.getElementById('p-totalcost').value=(p.lens1_cost||0)+(p.lens2_cost||0)+(p.frame_price||p.frame_cost||0);
+  document.getElementById('p-totalcost').value=(p.lens1_cost||0)+(p.lens2_cost||0)+(p.frame_cost||0);
 }
 
 async function deletePatient(id){
@@ -3632,7 +3643,7 @@ async function loadReports(){
     return `<div class="rep-row rep-pt-row" onclick="viewPt(${p.id})" style="cursor:pointer;grid-template-columns:110px 1fr 90px 90px 100px 100px 90px">
       <span class="rep-date">${fmtDate(p.admission_date)}</span><span>${p.name||'—'}</span>
       <span class="rep-pos">${IQD((p.lens1_cost||0)+(p.lens2_cost||0))}</span>
-      <span class="rep-pos">${IQD(p.frame_price||p.frame_cost||0)}</span>
+      <span class="rep-pos">${IQD(p.frame_cost||0)}</span>
       <span class="rep-pos">${IQD(p.total_cost)}</span><span class="rep-pos">${IQD(p.amount_paid)}</span>
       <span>${statusBadge}</span>
     </div>`;
