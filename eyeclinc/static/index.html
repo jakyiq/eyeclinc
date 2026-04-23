@@ -284,7 +284,8 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--fo
 }
 
 /* ── STATS ── */
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px;}
+@media(min-width:600px){.stats-grid{grid-template-columns:repeat(4,1fr);}}
 .stat-card{
   background:var(--sur);
   border:1px solid var(--bdr);
@@ -1470,23 +1471,32 @@ canvas{display:block;width:100% !important;}
       </div>
 
       <!-- Daily cash snapshot -->
-      <div id="dash-cash-bar" style="background:var(--acc);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
-        <div style="color:rgba(255,255,255,.65);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">اليوم</div>
-        <div style="flex:1;display:flex;gap:20px;flex-wrap:wrap">
-          <div><div style="font-size:22px;font-weight:700;color:#fff" id="dc-pts">—</div><div style="font-size:11px;color:rgba(255,255,255,.6)">مريض</div></div>
-          <div style="width:1px;background:rgba(255,255,255,.15)"></div>
-          <div><div style="font-size:22px;font-weight:700;color:#7dd3a8" id="dc-sales">—</div><div style="font-size:11px;color:rgba(255,255,255,.6)">إجمالي المبيعات</div></div>
-          <div style="width:1px;background:rgba(255,255,255,.15)"></div>
-          <div><div style="font-size:22px;font-weight:700;color:#fcd34d" id="dc-collected">—</div><div style="font-size:11px;color:rgba(255,255,255,.6)">المحصّل نقداً</div></div>
-          <div style="width:1px;background:rgba(255,255,255,.15)"></div>
-          <div><div style="font-size:22px;font-weight:700;color:#fca5a5" id="dc-owing">—</div><div style="font-size:11px;color:rgba(255,255,255,.6)">متبقي للتحصيل</div></div>
+      <div id="dash-cash-bar" style="background:var(--acc);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+        <div style="color:rgba(255,255,255,.65);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap" id="dash-today-date">اليوم</div>
+        <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;min-width:0">
+          <div style="text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#fff" id="dc-pts">—</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6)">مريض</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#7dd3a8" id="dc-sales">—</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6)">إجمالي المبيعات</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#fcd34d" id="dc-collected">—</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6)">المحصّل نقداً</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:20px;font-weight:700;color:#fca5a5" id="dc-owing">—</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6)">متبقي</div>
+          </div>
         </div>
-        <div style="font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.4)" id="dash-today-date"></div>
       </div>
 
-      <div class="stats-grid" id="dash-stats"></div>
+      <!-- 4 stat cards -->
+      <div class="stats-grid" id="dash-stats" style="margin-bottom:16px"></div>
 
-      <!-- Debt panel -->
+      <!-- Debt panel (hidden by default) -->
       <div id="dash-debt-panel" style="display:none;margin-bottom:16px">
         <div class="card" style="padding:0;border:2px solid var(--red-s)">
           <div style="padding:10px 16px;background:var(--red-m);display:flex;justify-content:space-between;align-items:center">
@@ -1498,7 +1508,7 @@ canvas{display:block;width:100% !important;}
       </div>
 
       <!-- Charts row -->
-      <div class="charts-grid" id="dash-charts-grid" style="margin-bottom:16px">
+      <div class="charts-grid" style="margin-bottom:16px">
         <div class="chart-card">
           <div class="chart-title">
             <span>📈 المبيعات — آخر 7 أيام</span>
@@ -1516,18 +1526,28 @@ canvas{display:block;width:100% !important;}
           <div class="donut-legend" id="donut-legend"></div>
         </div>
       </div>
-        <div class="card"><div class="card-title">مرضى اليوم</div><div id="dash-today"></div></div>
-        <div class="card"><div class="card-title">آخر 7 أيام</div><div id="dash-recent"></div></div>
+
+      <!-- Today / Week patient lists -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="card-title" style="padding:12px 16px;margin:0;border-bottom:1px solid var(--bdr)">مرضى اليوم</div>
+          <div id="dash-today"></div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="card-title" style="padding:12px 16px;margin:0;border-bottom:1px solid var(--bdr)">آخر 7 أيام</div>
+          <div id="dash-recent"></div>
+        </div>
       </div>
 
       <!-- Upcoming reviews -->
-      <div class="card" style="padding:0;overflow:hidden">
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--bdr)">
-          <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em">📅 مراجعات قادمة — الشهر القادم</div>
+          <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.07em">📅 مراجعات قادمة</div>
           <span class="badge badge-amb" id="dash-review-count">0</span>
         </div>
         <div id="dash-reviews" style="max-height:260px;overflow-y:auto"></div>
       </div>
+
     </div>
 
     <!-- ══ PATIENT LEDGER ══ -->
@@ -3082,14 +3102,7 @@ function calcTotal(){
 }
 
 // ── SAVE PATIENT ──
-let _savingPatient = false;
 async function savePatient(){
-  if(_savingPatient)return;
-  _savingPatient=true;
-  const btnSave=document.getElementById('btn-save');
-  const origHtml=btnSave?btnSave.innerHTML:'';
-  if(btnSave){btnSave.disabled=true;btnSave.innerHTML='<span>⏳</span> جارٍ الحفظ...';}
-  try{
   const name=document.getElementById('p-nm').value.trim();
   if(!name){toast('أدخل اسم المريض','red');return;}
   const qty=+document.getElementById('p-lqty').value;
@@ -3134,10 +3147,6 @@ async function savePatient(){
   toast(LANG==='en'?(ePt?'Patient updated!':'Patient saved!'):(ePt?'تم تحديث المريض':'تم حفظ المريض!'),'green');
   await loadLns(); // refresh stock counts after lens deduction
   clearForm();updateBadges();
-  }finally{
-    _savingPatient=false;
-    if(btnSave){btnSave.disabled=false;btnSave.innerHTML=origHtml;}
-  }
 }
 
 function clearForm(){
@@ -3643,7 +3652,7 @@ async function loadReports(){
     return `<div class="rep-row rep-pt-row" onclick="viewPt(${p.id})" style="cursor:pointer;grid-template-columns:110px 1fr 90px 90px 100px 100px 90px">
       <span class="rep-date">${fmtDate(p.admission_date)}</span><span>${p.name||'—'}</span>
       <span class="rep-pos">${IQD((p.lens1_cost||0)+(p.lens2_cost||0))}</span>
-      <span class="rep-pos">${IQD(p.frame_cost||0)}</span>
+      <span class="rep-pos">${IQD((p.frame_price||p.frame_cost)||0)}</span>
       <span class="rep-pos">${IQD(p.total_cost)}</span><span class="rep-pos">${IQD(p.amount_paid)}</span>
       <span>${statusBadge}</span>
     </div>`;
@@ -4302,7 +4311,7 @@ function buildDashCharts(){
 
   // Donut
   const lensRev    = PTS.reduce((s,p)=>s+(+(p.lens1_price||p.lens1_cost)||0)+(+(p.lens2_price||p.lens2_cost)||0),0);
-  const frameRev   = PTS.reduce((s,p)=>s+(+(p.frame_price||p.frame_cost)||0),0);
+  const frameRev   = PTS.reduce((s,p)=>s+(+(p.frame_price)||+(p.frame_cost)||0),0);
   const checkupRev = PTS.reduce((s,p)=>s+((p.checkup_done&&p.checkup_paid)?(+(p.checkup_fee)||5000):0),0);
   const segs = [{label:'عدسات',value:lensRev,color:acc},{label:'إطارات',value:frameRev,color:grn},{label:'كشف',value:checkupRev,color:amb}].filter(s=>s.value>0);
   const dc = document.getElementById('chart-donut');
